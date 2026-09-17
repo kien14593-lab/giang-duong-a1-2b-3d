@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mô hình 3D – Giảng đường A1-2B – Phân hiệu ĐH GTVT tại TP.HCM</title>
+<meta name="description" content="Mô hình 3D tương tác Giảng đường A1-2B (9 tầng) – Phân hiệu Trường Đại học Giao thông Vận tải tại TP.HCM, dựng từ hồ sơ thiết kế sơ bộ.">
+<style>
+:root{--panel:#ffffffee;--ink:#1c2733;--muted:#5a6b7c;--accent:#0b62a8;--line:#dfe6ee}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font-family:"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);overflow:hidden;
+ background:linear-gradient(#a9cdec 0%,#d6e8f7 45%,#eef4f9 100%)}
+canvas{display:block}
+#labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+#hdr{position:absolute;left:0;right:0;top:0;padding:10px 16px;display:flex;align-items:center;gap:12px;pointer-events:none}
+#hdr h1{margin:0;font-size:18px;font-weight:700;letter-spacing:.2px;text-shadow:0 1px 0 #fff}
+#hdr h1 span{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+#togglePanel{pointer-events:auto;margin-left:auto;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:16px}
+#panel{position:absolute;top:58px;left:12px;bottom:12px;width:300px;overflow:auto;background:var(--panel);backdrop-filter:blur(6px);
+ border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:0 6px 24px #0002;font-size:13px}
+#panel.hidden{display:none}
+#panel h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:10px 0 6px}
+#panel section{border-bottom:1px solid var(--line);padding-bottom:8px}
+#panel section:last-child{border-bottom:0}
+.btns{display:flex;flex-wrap:wrap;gap:5px}
+button.b{border:1px solid var(--line);background:#fff;border-radius:7px;padding:5px 8px;cursor:pointer;font-size:12px;color:var(--ink)}
+button.b:hover{border-color:var(--accent);color:var(--accent)}
+button.b.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+#floors{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px}
+.fl{display:flex;align-items:center;gap:6px;padding:2px 0}
+.fl input{margin:0}
+.fl .nm{flex:1;cursor:pointer}
+.fl .nm:hover{color:var(--accent);text-decoration:underline}
+.fl small{color:var(--muted)}
+label.row{display:flex;align-items:center;gap:8px;padding:3px 0}
+label.row input[type=range]{flex:1;min-width:0}
+label.row span.v{width:44px;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+#legend .it{display:flex;align-items:center;gap:8px;padding:2px 0}
+#legend .sw{width:16px;height:12px;border-radius:3px;border:1px solid #0002}
+ul.facts{margin:0;padding-left:16px;line-height:1.45}
+p.note{color:var(--muted);font-size:12px;margin:6px 0 0}
+#tip{position:absolute;display:none;pointer-events:none;background:#1c2733ee;color:#fff;padding:6px 9px;border-radius:7px;font-size:12px;max-width:260px;line-height:1.35;z-index:5}
+#tip b{display:block;font-size:13px}
+#roominfo{position:absolute;right:12px;bottom:12px;width:280px;display:none;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;box-shadow:0 6px 24px #0002}
+#roominfo h3{margin:0 0 4px;font-size:14px}
+#roominfo .x{position:absolute;right:8px;top:6px;border:0;background:none;cursor:pointer;font-size:16px}
+#hint{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);background:#ffffffcc;border:1px solid var(--line);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--muted);pointer-events:none;white-space:nowrap}
+#loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted);background:#eef4f9}
+.lbl{background:#ffffffd9;border:1px solid #0003;border-radius:6px;padding:2px 6px;font-size:11px;line-height:1.2;color:#1c2733;white-space:nowrap;text-align:center;transform:translateY(-50%)}
+.lbl b{display:block;font-weight:600}
+.lbl span{color:#5a6b7c;font-size:10px}
+.lbl.axis{background:#fff;border:2px solid #444;border-radius:50%;width:22px;height:22px;padding:0;line-height:18px;font-weight:700;font-size:11px}
+@media (max-width:760px){#panel{width:calc(100% - 24px);top:56px;bottom:auto;max-height:55vh}#hint{display:none}#roominfo{width:calc(100% - 24px)}}
+</style>
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}
+</script>
+</head>
+<body>
+<div id="loading">Đang dựng mô hình 3D…</div>
+<div id="labels"></div>
+<header id="hdr">
+  <h1>Giảng đường A1-2B <span>Phân hiệu Trường Đại học Giao thông Vận tải tại TP.HCM · Mô hình 3D dựng từ hồ sơ thiết kế sơ bộ (PA kiến trúc 1)</span></h1>
+  <button id="togglePanel" title="Ẩn/hiện bảng điều khiển">☰</button>
+</header>
+<aside id="panel">
+  <section>
+    <h2>Góc nhìn</h2>
+    <div class="btns" id="views">
+      <button class="b on" data-view="persp">Phối cảnh</button>
+      <button class="b" data-view="front">Mặt đứng chính</button>
+      <button class="b" data-view="rear">Mặt đứng sau</button>
+      <button class="b" data-view="side">Mặt bên</button>
+      <button class="b" data-view="top">Mặt bằng</button>
+      <button class="b" data-view="section">Cắt qua hội trường</button>
+      <button class="b" data-view="hall">Trong hội trường</button>
+      <button class="b" data-view="room">Trong giảng đường</button>
+    </div>
+  </section>
+  <section>
+    <h2>Tầng hiển thị <small style="font-weight:400;text-transform:none">(bấm tên tầng để xem riêng)</small></h2>
+    <div id="floors"></div>
+    <div class="btns" style="margin-top:6px"><button class="b" id="allOn">Hiện tất cả</button><button class="b" id="allOff">Ẩn tất cả</button></div>
+  </section>
+  <section>
+    <h2>Công cụ</h2>
+    <label class="row"><input type="checkbox" id="labelsOn"> Nhãn tên phòng</label>
+    <label class="row"><input type="checkbox" id="facadeOn" checked> Vỏ bao che (mặt đứng, kính, lam)</label>
+    <label class="row"><input type="checkbox" id="colorsOn" checked> Tô màu công năng sàn</label>
+    <label class="row"><input type="checkbox" id="gridOn"> Lưới trục A–D / 1–6</label>
+    <label class="row"><input type="checkbox" id="rotateOn"> Xoay tự động</label>
+    <label class="row"><input type="checkbox" id="shadowOn" checked> Bóng đổ</label>
+    <label class="row">Tách tầng <input type="range" id="explode" min="0" max="8" step="0.1" value="0"><span class="v">0 m</span></label>
+    <label class="row">Cắt dọc X <input type="range" id="cutX" min="0" max="47" step="0.1" value="47"><span class="v">—</span></label>
+    <label class="row">Cắt ngang Y <input type="range" id="cutY" min="0" max="14" step="0.1" value="14"><span class="v">—</span></label>
+    <label class="row">Cắt cao độ <input type="range" id="cutZ" min="-1" max="38" step="0.1" value="38"><span class="v">—</span></label>
+    <div class="btns"><button class="b" id="resetCuts">Bỏ mặt cắt</button><button class="b" id="resetAll">Đặt lại tất cả</button></div>
+  </section>
+  <section>
+    <h2>Chú giải màu công năng</h2>
+    <div id="legend"></div>
+  </section>
+  <section>
+    <h2>Thông tin công trình</h2>
+    <ul class="facts">
+      <li><b>Công trình:</b> Giảng đường A1-2B</li>
+      <li><b>Địa điểm:</b> Phân hiệu Trường ĐH GTVT tại TP.HCM</li>
+      <li><b>Quy mô:</b> 9 tầng + tum thang; 46,4 × 13,0 m</li>
+      <li><b>Bước cột:</b> 8,2 – 10,0 – 10,0 – 10,0 – 8,2 m</li>
+      <li><b>Chiều cao tầng:</b> T1 4,0 m; T2–T9 3,6 m</li>
+      <li><b>Cao độ:</b> mái +32,8 m; đỉnh tum +36,4 m; chiều cao PCCC 28,0 m</li>
+      <li><b>Tổng diện tích sàn:</b> ≈ 5.425 m²</li>
+      <li><b>Hội trường:</b> 204 chỗ, thông tầng T1–T2, sàn bậc</li>
+      <li><b>Giảng đường:</b> 50 chỗ (T1), 100 chỗ ×2 (T3–T5), 60 chỗ ×3 (T6–T8)</li>
+      <li><b>Tầng 9:</b> 3 phòng hội thảo + 6 phòng làm việc GS/GV</li>
+    </ul>
+    <p class="note">Mô hình được dựng lại từ mặt bằng, mặt cắt và phối cảnh trong hồ sơ thiết kế sơ bộ; nội thất và một số chi tiết mặt đứng là diễn giải minh hoạ, không thay thế hồ sơ kỹ thuật.</p>
+  </section>
+</aside>
+<div id="tip"></div>
+<div id="roominfo"><button class="x" id="closeInfo">×</button><h3></h3><div class="c"></div></div>
+<div id="hint">Kéo chuột: xoay · Lăn: thu phóng · Chuột phải: dịch chuyển · Rê/bấm vào phòng: xem tên & diện tích</div>
+<script src="data.js"></script>
+<script type="module" src="main.js"></script>
+</body>
+</html>
