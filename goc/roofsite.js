@@ -1,9 +1,8 @@
 // Mái + tum thang, khu đất xung quanh, lưới trục.
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { Builder, M, L, W, GRADE, ROOF, TOWER_TOP, TUM_TOP, COL_X, COL_Y, GRID_X, GRID_Y, V } from './common.js';
+import { Builder, M, L, W, GRADE, ROOF, TOWER_TOP, TUM_TOP, COL_X, COL_Y, GRID_X, GRID_Y } from './common.js';
 import { STAIR_WELLS, LIFTS, rect } from './storey.js';
-import { propRoof, propSite } from './proposal.js';
 
 export function buildRoof() {
   const g = new THREE.Group(); g.name = 'roof';
@@ -33,7 +32,6 @@ export function buildRoof() {
   for (const x of [40.6, 43.4]) { const c = new THREE.CylinderGeometry(0.9, 0.9, 1.6, 24); c.translate(x, TUM_TOP + 0.8, -6.5); B.add(c, M.steel); }
   for (const x of [11, 16, 21, 26, 31]) B.box(x, x + 1.1, 11.0, 11.9, ROOF, ROOF + 0.9, M.steel);
   B.build(g);
-  if (V.proposal) { const P = new Builder(true); propRoof(P); P.build(g); }
   return g;
 }
 
@@ -44,15 +42,12 @@ export function buildSite() {
   B.box(-8, L + 8, -14, W + 6, GRADE - 0.03, GRADE, M.pave);
   // thềm bậc trước sảnh chính (sàn tầng 1 cao hơn sân 1,0 m)
   for (let k = 0; k < 5; k++) B.box(18.3, 28.2, -2.6 + k * 0.42, -0.1, GRADE + k * 0.2, GRADE + (k + 1) * 0.2, M.pave);
-  // dốc tiếp cận cho người khuyết tật (PA gốc: 7 m, dốc 1/7 – PA đề xuất thay bằng dốc 1/12 trong proposal.js)
+  // dốc tiếp cận cho người khuyết tật
   B.box(16.6, 18.3, -1.8, -0.1, GRADE, 0, M.pave);
-  if (!V.proposal) {
-    B.slope(13.1, -0.95, GRADE + 0.5 - 0.07, Math.hypot(7, 1), 1.7, 0.14, 0, Math.atan2(1, 7), M.pave);
-    B.box(9.5, 16.6, -1.9, -1.8, GRADE, 0.9, M.rail);
-  }
+  B.slope(13.1, -0.95, GRADE + 0.5 - 0.07, Math.hypot(7, 1), 1.7, 0.14, 0, Math.atan2(1, 7), M.pave);
+  B.box(9.5, 16.6, -1.9, -1.8, GRADE, 0.9, M.rail);
   // cây xanh
-  let trees = [[-5, -7], [-5, 9], [52, -7], [52, 9], [7, -10], [39, -10], [14, -12], [32, -12], [-13, 1], [59, 4], [3, 19], [43, 19], [23, 20], [-10, 16], [56, 16]];
-  if (V.proposal) trees = trees.filter(([x, y]) => !(y > 14 && x > 0 && x < 50));
+  const trees = [[-5, -7], [-5, 9], [52, -7], [52, 9], [7, -10], [39, -10], [14, -12], [32, -12], [-13, 1], [59, 4], [3, 19], [43, 19], [23, 20], [-10, 16], [56, 16]];
   trees.forEach(([x, y], k) => {
     const t = new THREE.CylinderGeometry(0.16, 0.22, 2.4, 8); t.translate(x, GRADE + 1.2, -y); B.add(t, M.trunk);
     const r = 1.5 + (k % 3) * 0.35, s = new THREE.SphereGeometry(r, 12, 9); s.translate(x, GRADE + 2.4 + r * 0.85, -y); B.add(s, k % 2 ? M.leaf : M.leaf2);
@@ -64,7 +59,6 @@ export function buildSite() {
     const h = new THREE.SphereGeometry(0.14, 8, 6); h.translate(x, GRADE + 1.47, -y); B.add(h, m);
   }
   B.build(g);
-  if (V.proposal) { const P = new Builder(true); propSite(P); P.build(g); }
   return g;
 }
 

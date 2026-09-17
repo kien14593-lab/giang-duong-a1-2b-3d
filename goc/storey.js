@@ -1,11 +1,10 @@
 // Dựng một tầng điển hình: sàn, dầm, cột, phòng (tường, cửa, nội thất), thang máy, thang bộ, vỏ bao che.
 import * as THREE from 'three';
-import { Builder, M, L, W, FFL, TOP, FLOOR_KEY, COL_X, COL_Y, VOID, KIND, kindColor, planes, GRADE, V, rect } from './common.js';
-import { propRooms, propStorey } from './proposal.js';
+import { Builder, M, L, W, FFL, TOP, FLOOR_KEY, COL_X, COL_Y, VOID, KIND, kindColor, planes, canvasTexture, GRADE } from './common.js';
 
 export const STAIR_WELLS = [[0.3, 5.8, 0.3, 4.4], [40.6, 46.1, 0.3, 4.4]];
 export const LIFTS = [[0.24, 2.45, 4.74, 6.94], [0.24, 2.45, 7.14, 9.34]];
-export { rect };
+export const rect = (x0, x1, y0, y1) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
 
 export const kindMats = {};
 for (const k of Object.keys(KIND)) kindMats[k] = new THREE.MeshStandardMaterial({ color: kindColor(k), roughness: 0.9, clippingPlanes: planes });
@@ -15,14 +14,13 @@ const BAL = [[10.34, 4.6, 16.31, 4.6], [30.09, 4.6, 36.05, 4.6], [36.05, 4.6, 36
 
 export function makePatch(geo, kind, rec) {
   const m = new THREE.Mesh(geo, kindMats[kind]);
-  m.name = rec.name; m.receiveShadow = true; m.userData.room = rec; m.userData.kind = kind; return m;
+  m.receiveShadow = true; m.userData.room = rec; m.userData.kind = kind; return m;
 }
 
 export function buildStorey(i) {
-  const z0 = FFL[i], z1 = TOP[i], key = FLOOR_KEY[i];
-  const rooms = V.proposal ? propRooms(i, window.ROOMS[key]) : window.ROOMS[key];
+  const z0 = FFL[i], z1 = TOP[i], key = FLOOR_KEY[i], rooms = window.ROOMS[key];
   const g = new THREE.Group(); g.name = 'storey' + i;
-  const B = new Builder(), P = new Builder(true), hover = [], labels = [];
+  const B = new Builder(), hover = [], labels = [];
 
   // ---- sàn, dầm, cột
   if (i === 0) {
@@ -42,11 +40,10 @@ export function buildStorey(i) {
   // ---- phòng
   for (const r of rooms) {
     const rec = { name: r.name, area: r.area, est: r.est, kind: r.k, floor: i };
-    if (r.prop) { r.prop(P, r, z0, z1); addPatch(g, hover, r, z0, rec); labels.push(lbl(r, z0, rec)); continue; }
     if (r.special === 'hall') continue;
     if (r.special === 'lift') { lift(B, r, z0, z1); if (i === 0) labels.push(lbl(r, z0, rec)); continue; }
     if (r.special === 'stair') {
-      stairRoom(B, r, z0, z1, i);
+      stairRoom(B, r, z0, z1);
       if (i === 0) { addPatch(g, hover, r, z0, rec); labels.push(lbl(r, z0, rec)); }
       continue;
     }
@@ -61,7 +58,6 @@ export function buildStorey(i) {
   }
   facade(B, g, i, z0, z1);
   B.build(g);
-  if (V.proposal) { propStorey(P, i, z0, z1); P.build(g); }
   return { group: g, hover, labels };
 }
 
@@ -147,11 +143,10 @@ function lift(B, r, z0, z1) {
   B.box(r.x1 - 0.03, r.x1 + 0.03, yc - 0.5, yc + 0.5, z0, z0 + 2.1, M.steel);
 }
 
-function stairRoom(B, r, z0, z1, i) {
+function stairRoom(B, r, z0, z1) {
   const t = 0.15, h = z1 - 0.15, right = r.x0 > 20;
   B.box(r.x0 - t, r.x1 + t, r.y1, r.y1 + t, z0, h, M.wall);
   if (right) B.box(r.x0 - t, r.x0, r.y0, r.y1 + t, z0, h, M.wall); else B.box(r.x1, r.x1 + t, r.y0, r.y1 + t, z0, h, M.wall);
-  if (V.proposal && right && i === 0) return;   // PA đề xuất: thang phải ở T1 ra qua buồng đệm phía Tây
   const xd = right ? L - 6.87 : 6.87;
   B.box(xd - 0.6, xd + 0.6, r.y1 - 0.02, r.y1 + t + 0.02, z0, z0 + 2.2, M.door);
 }
@@ -187,7 +182,7 @@ function facade(B, g, i, z0, z1) {
     for (let x = 8.2; x <= 38.2 + 1e-6; x += 1.25) B.box(x - 0.03, x + 0.03, 0.5, 0.7, 0, 3.4, M.mullion);
     B.box(20.6, 25.9, 0.45, 0.75, 2.6, 3.4, M.dark);
     for (const x of [20.6, 21.9, 23.2, 24.5, 25.8]) B.box(x - 0.05, x + 0.05, 0.45, 0.75, 0, 2.6, M.dark);
-    if (!V.proposal) { B.box(19.2, 27.3, -2.6, 0.3, 3.3, 3.55, M.white); B.box(19.2, 27.3, -2.6, -2.35, 2.95, 3.3, M.white); }
+    B.box(19.2, 27.3, -2.6, 0.3, 3.3, 3.55, M.white); B.box(19.2, 27.3, -2.6, -2.35, 2.95, 3.3, M.white);
     B.box(14.43, 31.96, 12.8, 13.05, 0, 3.4, M.white);
     B.box(8.2, 14.43, 12.81, 12.85, 0, 3.4, M.glass); B.box(31.96, 38.2, 12.81, 12.85, 0, 3.4, M.glass);
     for (let x = 8.2; x <= 38.2 + 1e-6; x += 1.25) if (x < 14.5 || x > 31.9) B.box(x - 0.03, x + 0.03, 12.75, 12.95, 0, 3.4, M.mullion);
@@ -195,35 +190,20 @@ function facade(B, g, i, z0, z1) {
     B.box(8.2, 38.2, -0.05, 0.25, z0 - 0.6, z0 + 0.12, M.white); B.box(8.2, 38.2, 12.75, 13.05, z0 - 0.6, z0 + 0.12, M.white);
     B.box(8.2, 38.2, 0.13, 0.17, g0, g1, M.glass);
     for (let x = 8.2; x <= 38.2 + 1e-6; x += 1.25) B.box(x - 0.03, x + 0.03, 0.05, 0.25, g0, g1, M.mullion);
-    if (!V.proposal) {
-      for (const dz of [1.5, 1.95, 2.4, 2.85]) B.box(8.2, 38.2, -0.62, -0.05, z0 + dz - 0.03, z0 + dz + 0.03, M.louvre);
-      for (let x = 8.2; x <= 38.2 + 1e-6; x += 2.5) B.box(x - 0.05, x + 0.05, -0.62, -0.5, g0, g1, M.louvre);
-    }
+    for (const dz of [1.5, 1.95, 2.4, 2.85]) B.box(8.2, 38.2, -0.62, -0.05, z0 + dz - 0.03, z0 + dz + 0.03, M.louvre);
+    for (let x = 8.2; x <= 38.2 + 1e-6; x += 2.5) B.box(x - 0.05, x + 0.05, -0.62, -0.5, g0, g1, M.louvre);
     B.box(8.2, 38.2, 12.81, 12.85, g0, g1, M.glass);
     for (let x = 8.2; x <= 38.2 + 1e-6; x += 1.25) B.box(x - 0.03, x + 0.03, 12.75, 12.95, g0, g1, M.mullion);
-    for (let k = 0; 8.55 + 0.7 * k < 38.0; k++) {
-      if ((k + 2 * i) % 4 === 3) continue;
-      const x = 8.55 + 0.7 * k; if (V.proposal && x > 36.0) continue;
-      B.box(x - 0.06, x + 0.06, 12.85, 13.3, g0, g1, M.fin);
-    }
+    for (let k = 0; 8.55 + 0.7 * k < 38.0; k++) { if ((k + 2 * i) % 4 === 3) continue; const x = 8.55 + 0.7 * k; B.box(x - 0.06, x + 0.06, 12.85, 13.3, g0, g1, M.fin); }
   }
-  if (i === 8) g.add(...logoBadge(z0));
-}
-
-// ---- Logo trường trên khối xanh mặt chính (T9): đĩa nền trắng Ø2,2 m + logo chính thức UTC/UTC2 (img/logo-utc.png).
-// CircleGeometry nằm trong mặt XY, hướng +z (mặt trước) → ảnh thẳng, không lật/xoay; texture dùng chung, không dispose khi dựng lại.
-let logoTex = null;
-export function logoBadge(z0, x = 42.3, dz = 1.9) {
-  if (!logoTex) {
-    logoTex = new THREE.TextureLoader().load('img/logo-utc.png');
-    logoTex.colorSpace = THREE.SRGBColorSpace; logoTex.anisotropy = 8;
+  if (i === 8) {
+    // Logo chính thức UTC/UTC2 (../img/logo-utc.png) trên đĩa nền trắng; CircleGeometry hướng +z → ảnh thẳng, không xoay
+    const tex = new THREE.TextureLoader().load('../img/logo-utc.png'); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.06, 48), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, clippingPlanes: planes }));
+    disc.rotation.x = Math.PI / 2; disc.position.set(42.3, z0 + 1.9, 0.09); disc.userData.facade = true; disc.castShadow = true; g.add(disc);
+    const logo = new THREE.Mesh(new THREE.CircleGeometry(1.04, 64), new THREE.MeshStandardMaterial({
+      map: tex, transparent: true, alphaTest: 0.05, roughness: 0.6, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.22, clippingPlanes: planes,
+    }));
+    logo.position.set(42.3, z0 + 1.9, 0.125); logo.userData.facade = true; g.add(logo);
   }
-  const disc = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.06, 48), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, clippingPlanes: planes }));
-  disc.rotation.x = Math.PI / 2; disc.position.set(x, z0 + dz, 0.09); disc.castShadow = true; disc.name = 'Logo_De';
-  const logo = new THREE.Mesh(new THREE.CircleGeometry(1.04, 64), new THREE.MeshStandardMaterial({
-    map: logoTex, transparent: true, alphaTest: 0.05, roughness: 0.6, emissive: 0xffffff, emissiveMap: logoTex, emissiveIntensity: 0.22, clippingPlanes: planes,
-  }));
-  logo.position.set(x, z0 + dz, 0.125); logo.name = 'Logo_UTC2';
-  for (const m of [disc, logo]) { m.userData.facade = true; m.userData.keep = true; }
-  return [disc, logo];
 }

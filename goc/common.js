@@ -14,8 +14,6 @@ export const COL_Y = [0.2, 4.7, 9.0, 12.8];
 export const GRID_X = [0, 8.2, 18.2, 28.2, 38.2, 46.4];
 export const GRID_Y = [0, 4.7, 9.0, 13.0];
 export const TOWER_TOP = 36.4, TUM_TOP = 35.0;
-// Cờ phương án: false = bản vẽ gốc, true = phương án đề xuất (đọc khi dựng hình)
-export const V = { proposal: false };
 
 // Đa giác hội trường (T1) và lỗ thông tầng trên sàn T2 (ngược chiều kim đồng hồ)
 export const HC = 23.195;
@@ -60,18 +58,14 @@ export const M = {
   shaft: std(0x8e99a6), steel: std(0xb9c0c8, { roughness: 0.3, metalness: 0.7 }),
   ground: std(0x8fb56b, { roughness: 1 }), pave: std(0xcfcbc2, { roughness: 1 }), water: std(0x5aa6d6, { roughness: 0.1, metalness: 0.2 }),
   trunk: std(0x6e4b2a), leaf: std(0x4f8f3c), leaf2: std(0x6aa84f), p1: std(0x3f6fb5), p2: std(0xd9534f), p3: std(0xf0c419),
-  // vật liệu cho phương án đề xuất
-  prop: std(0xff8a2a, { emissive: 0x6b2e00, emissiveIntensity: 0.35, roughness: 0.6 }),
-  green: std(0x5e9a3c, { roughness: 1 }), pv: std(0x17263f, { roughness: 0.25, metalness: 0.6 }), fire: std(0xc8332b, { roughness: 0.5 }),
 };
 // Vật liệu thuộc "vỏ bao che" – có thể tắt để nhìn vào trong
 export const FACADE_MATS = new Set([M.white, M.blue, M.dark, M.glass, M.mullion, M.louvre, M.fin]);
 const NO_SHADOW = new Set([M.glass, M.railGlass, M.water]);
-const MAT_NAME = new Map(Object.entries(M).map(([k, v]) => [v, k]));
 
-// Gom hình học theo vật liệu rồi hợp nhất → ít draw call. `prop = true`: đánh dấu là phần đề xuất (có thể tô sáng)
+// Gom hình học theo vật liệu rồi hợp nhất → ít draw call
 export class Builder {
-  constructor(prop = false) { this.b = new Map(); this.prop = prop; }
+  constructor() { this.b = new Map(); }
   add(g, mat) {
     if (g.index) g = g.toNonIndexed();
     if (!this.b.has(mat)) this.b.set(mat, []);
@@ -111,17 +105,13 @@ export class Builder {
       const merged = mergeGeometries(geoms, false);
       if (!merged) continue;
       const m = new THREE.Mesh(merged, mat);
-      m.name = (this.prop ? 'DeXuat_' : '') + (MAT_NAME.get(mat) || 'mat');
       m.castShadow = !NO_SHADOW.has(mat); m.receiveShadow = true;
       if (FACADE_MATS.has(mat)) m.userData.facade = true;
-      if (this.prop) { m.userData.prop = true; m.userData.mat0 = mat; }
       group.add(m);
     }
     this.b.clear();
   }
 }
-
-export const rect = (x0, x1, y0, y1) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
 
 export function polyGeom(pts, z0, thick) {
   const s = new THREE.Shape(pts.map(p => new THREE.Vector2(p[0], p[1])));

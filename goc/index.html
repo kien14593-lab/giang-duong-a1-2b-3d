@@ -15,9 +15,6 @@ canvas{display:block}
 #hdr{position:absolute;left:0;right:0;top:0;padding:10px 16px;display:flex;align-items:center;gap:12px;pointer-events:none}
 #hdr h1{margin:0;font-size:18px;font-weight:700;letter-spacing:.2px;text-shadow:0 1px 0 #fff}
 #hdr h1 span{display:block;font-size:12px;font-weight:400;color:var(--muted)}
-#banner{position:absolute;left:16px;top:58px;pointer-events:none}
-#banner .tag{display:inline-block;background:#1c2733;color:#fff;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:600;letter-spacing:.3px}
-#banner .tag.prop{background:#b45309}
 #togglePanel{pointer-events:auto;margin-left:auto;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:16px}
 #panel{position:absolute;top:58px;left:12px;bottom:12px;width:300px;overflow:auto;background:var(--panel);backdrop-filter:blur(6px);
  border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:0 6px 24px #0002;font-size:13px}
@@ -48,28 +45,11 @@ p.note{color:var(--muted);font-size:12px;margin:6px 0 0}
 #roominfo h3{margin:0 0 4px;font-size:14px}
 #roominfo .x{position:absolute;right:8px;top:6px;border:0;background:none;cursor:pointer;font-size:16px}
 #hint{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);background:#ffffffcc;border:1px solid var(--line);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--muted);pointer-events:none;white-space:nowrap}
-#measHint{position:absolute;left:50%;bottom:40px;transform:translateX(-50%);background:#e11d48;color:#fff;border-radius:20px;padding:5px 12px;font-size:12px;pointer-events:none;white-space:nowrap;display:none}
-#measHint.show{display:block}
-#variant .b.on{background:#b45309;border-color:#b45309}
-#variant .b[data-variant="orig"].on{background:var(--accent);border-color:var(--accent)}
 #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted);background:#eef4f9}
 .lbl{background:#ffffffd9;border:1px solid #0003;border-radius:6px;padding:2px 6px;font-size:11px;line-height:1.2;color:#1c2733;white-space:nowrap;text-align:center;transform:translateY(-50%)}
 .lbl b{display:block;font-weight:600}
 .lbl span{color:#5a6b7c;font-size:10px}
 .lbl.axis{background:#fff;border:2px solid #444;border-radius:50%;width:22px;height:22px;padding:0;line-height:18px;font-weight:700;font-size:11px}
-.lbl.axis.rose{border-color:#c0392b;color:#c0392b;width:26px;height:26px;line-height:22px;font-size:13px}
-.lbl.meas{background:#e11d48;color:#fff;border-color:#9f1239;font-size:12px;transform:translateY(-120%)}
-.lbl.meas span{color:#ffe4e6;font-size:10px;display:block}
-.lbl.meas.tmp{background:#1c2733}
-.mrow{display:flex;align-items:center;gap:6px;padding:2px 0;font-size:12px}
-.mrow small{color:var(--muted);flex:1}
-.mrow button{border:0;background:none;cursor:pointer;color:#9f1239;font-size:14px}
-#changes{margin:6px 0 0;padding:0;list-style:none}
-#changes li{padding:3px 0 3px 8px;border-left:3px solid #ff8a2a;margin:3px 0;font-size:12px;line-height:1.35}
-#changes li b{color:#b45309}
-#variantTag{color:#b45309;font-style:normal;font-weight:600}
-input[type=date]{border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit;font-size:12px;flex:1}
-a{color:var(--accent)}
 @media (max-width:760px){#panel{width:calc(100% - 24px);top:56px;bottom:auto;max-height:55vh}#hint{display:none}#roominfo{width:calc(100% - 24px)}}
 </style>
 <script type="importmap">
@@ -83,18 +63,7 @@ a{color:var(--accent)}
   <h1>Giảng đường A1-2B <span>Phân hiệu Trường Đại học Giao thông Vận tải tại TP.HCM · Mô hình 3D dựng từ hồ sơ thiết kế sơ bộ (PA kiến trúc 1)</span></h1>
   <button id="togglePanel" title="Ẩn/hiện bảng điều khiển">☰</button>
 </header>
-<div id="banner"><span class="tag">BẢN GỐC · Hồ sơ TKSB</span></div>
 <aside id="panel">
-  <section>
-    <h2>Phương án</h2>
-    <div class="btns" id="variant">
-      <button class="b on" data-variant="orig">Bản gốc (hồ sơ)</button>
-      <button class="b" data-variant="prop">Đề xuất cải tiến</button>
-    </div>
-    <label class="row"><input type="checkbox" id="hlOn"> Tô sáng phần thay đổi (màu cam)</label>
-    <ul id="changes"></ul>
-    <p class="note" id="variantNote">Đang xem <i id="variantTag">bản gốc</i> dựng theo hồ sơ thiết kế sơ bộ. Bản dựng gốc còn được lưu riêng tại <a href="goc/index.html" target="_blank">goc/</a>.</p>
-  </section>
   <section>
     <h2>Góc nhìn</h2>
     <div class="btns" id="views">
@@ -128,34 +97,6 @@ a{color:var(--accent)}
     <div class="btns"><button class="b" id="resetCuts">Bỏ mặt cắt</button><button class="b" id="resetAll">Đặt lại tất cả</button></div>
   </section>
   <section>
-    <h2>Nắng &amp; bóng đổ theo ngày/giờ (TP.HCM)</h2>
-    <label class="row"><input type="checkbox" id="sunOn"> Mô phỏng vị trí mặt trời</label>
-    <label class="row">Ngày <input type="date" id="sunDate" value="2026-03-21"></label>
-    <div class="btns"><button class="b" data-sunday="equinox">Xuân phân 21/3</button><button class="b" data-sunday="summer">Hạ chí 21/6</button><button class="b" data-sunday="winter">Đông chí 22/12</button></div>
-    <label class="row">Giờ <input type="range" id="sunHour" min="5.5" max="18.5" step="0.1" value="9"><span class="v">09:00</span></label>
-    <label class="row">Hướng mặt chính <input type="range" id="sunBearing" min="0" max="359" step="1" value="180"><span class="v">180° (Nam)</span></label>
-    <div class="btns"><button class="b" id="sunPlay">▶ Chạy cả ngày</button></div>
-    <p class="note" id="sunInfo">—</p>
-    <p class="note">Hồ sơ chưa ghi hướng công trình; kéo thanh “Hướng mặt chính” theo hướng thực tế của mặt đứng chính (hoa gió B/Đ/N/T hiện trên nền khi bật).</p>
-  </section>
-  <section>
-    <h2>Đo khoảng cách</h2>
-    <div class="btns"><button class="b" id="measureOn">📏 Bật chế độ đo</button><button class="b" id="measClear">Xoá hết</button></div>
-    <div id="measList"></div>
-    <p class="note">Bấm 2 điểm trên mô hình để đo. Điểm tự bắt vào đỉnh gần nhất (chấm xanh). ESC để huỷ/thoát. Kết quả gồm khoảng cách thẳng và các thành phần ΔX · ΔY · Δcao.</p>
-  </section>
-  <section>
-    <h2>Lớp phủ bản vẽ PDF gốc</h2>
-    <label class="row"><input type="checkbox" id="ovlOn"> Phủ mặt bằng gốc lên sàn từng tầng</label>
-    <label class="row">Độ đậm <input type="range" id="ovlOpacity" min="0" max="1" step="0.05" value="0.7"><span class="v">70%</span></label>
-    <p class="note" id="ovlInfo">Mặt bằng T1, T2, T3–5, T6–8, T9 cắt từ hồ sơ PDF, căn theo lưới trục. Kết hợp “Mặt bằng” + ẩn các tầng trên để so sánh.</p>
-  </section>
-  <section>
-    <h2>Xuất mô hình</h2>
-    <div class="btns"><button class="b" id="expGlb">⬇ glTF (.glb)</button><button class="b" id="expObj">⬇ OBJ</button></div>
-    <p class="note" id="expInfo">Xuất phương án đang xem (chỉ phần đang hiển thị). GLB mở được trong SketchUp (2021+ / extension glTF), Revit (qua FormIt hoặc plugin), Blender, Rhino, Twinmotion. OBJ dùng cho SketchUp Pro (File › Import) khi không có glTF. Đơn vị mét; trục Y hướng lên (three.js).</p>
-  </section>
-  <section>
     <h2>Chú giải màu công năng</h2>
     <div id="legend"></div>
   </section>
@@ -179,7 +120,6 @@ a{color:var(--accent)}
 <div id="tip"></div>
 <div id="roominfo"><button class="x" id="closeInfo">×</button><h3></h3><div class="c"></div></div>
 <div id="hint">Kéo chuột: xoay · Lăn: thu phóng · Chuột phải: dịch chuyển · Rê/bấm vào phòng: xem tên & diện tích</div>
-<div id="measHint">Chế độ đo: bấm điểm thứ nhất</div>
 <script src="data.js"></script>
 <script type="module" src="main.js"></script>
 </body>

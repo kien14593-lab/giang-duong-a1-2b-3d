@@ -1,8 +1,7 @@
 // Hội trường 204 chỗ: thông tầng T1–T2, sàn bậc, sân khấu, ghế; vào từ sảnh hai bên ở cao độ sàn.
 import * as THREE from 'three';
-import { Builder, M, HALL, HC, hallXL, polyGeom, V } from './common.js';
+import { Builder, M, HALL, HC, hallXL, polyGeom } from './common.js';
 import { makePatch } from './storey.js';
-import { propHall } from './proposal.js';
 
 export function buildHall(g1, g2, hover) {
   const B = new Builder();
@@ -36,30 +35,24 @@ export function buildHall(g1, g2, hover) {
     B.box(22.6, 23.8, yb, yb + 0.4, (k - 1) * 0.36, (k - 0.5) * 0.36, M.tier);   // bậc phụ lối đi giữa
   }
   for (let k = 0; k <= 6; k++) {
-    if (V.proposal && k === 6) continue;   // PA đề xuất: hàng trên cùng thành sàn cầu/thang vào từ T2
     const yc = 8.2 - (k + 0.5) * 0.83, zf = k * 0.36, xl = hallXL(yc) + 0.65, xr = 2 * HC - hallXL(yc) - 0.65;
     for (let x = xl; x + 0.5 <= xr; x += 0.56) {
       if (x + 0.5 > 22.55 && x < 23.85) continue;
-      if (V.proposal && k === 0 && (x < 16.4 || x + 0.5 > 2 * HC - 16.4)) continue;   // chỗ xe lăn hàng đầu
       B.box(x, x + 0.5, yc - 0.22, yc + 0.22, zf + 0.22, zf + 0.45, M.seat);
       B.box(x, x + 0.5, yc - 0.34, yc - 0.22, zf + 0.22, zf + 0.98, M.seat);
     }
   }
   // lan can thấp mép hàng ghế trên cùng (bảo vệ phía tường trước)
-  if (!V.proposal) B.box(hallXL(2.6) + 0.2, 2 * HC - hallXL(2.6) - 0.2, 2.42, 2.5, 2.16, 3.1, M.rail);
+  B.box(hallXL(2.6) + 0.2, 2 * HC - hallXL(2.6) - 0.2, 2.42, 2.5, 2.16, 3.1, M.rail);
   B.build(g1);
 
   // ---- phần trên (T2, 3,85–7,45): tường quanh khối hội trường trong khoảng thông tầng
   const U = new Builder();
   const up = [[14.43, 10.48], [14.43, 6.5], [18.5, 2.38], [27.9, 2.38], [31.96, 6.5], [31.96, 10.48]];
-  for (let e = 0; e < up.length - 1; e++) {
-    if (V.proposal && e === 2) continue;   // tường trước: PA đề xuất dựng lại với 2 cửa đôi
-    U.wall(up[e][0], up[e][1], up[e + 1][0], up[e + 1][1], 3.85, 7.45, 0.2, M.wall);
-  }
+  for (let e = 0; e < up.length - 1; e++) U.wall(up[e][0], up[e][1], up[e + 1][0], up[e + 1][1], 3.85, 7.45, 0.2, M.wall);
   U.box(14.23, 32.16, 10.33, 10.48, 3.85, 7.45, M.wall);
   U.box(18.6, 27.8, 2.16, 2.2, 6.0, 7.2, M.glass);   // dải cửa sổ hắt sáng
   U.build(g2);
-  if (V.proposal) { const P1 = new Builder(true), P2 = new Builder(true); propHall(P1, P2); P1.build(g1); P2.build(g2); }
 
   return [{ x: HC, y: 6.3, z: 3.2, rec }];
 }
