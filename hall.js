@@ -3,11 +3,12 @@ import * as THREE from 'three';
 import { Builder, M, HALL, HC, hallXL, polyGeom, V } from './common.js';
 import { makePatch } from './storey.js';
 import { propHall } from './proposal.js';
+import { v3Hall } from './v3.js';
 
 export function buildHall(g1, g2, hover) {
   const B = new Builder();
-  const src = window.ROOMS.T1.find(r => r.special === 'hall');
-  const rec = { name: src.name, area: src.area, kind: 'hall', floor: 0 };
+  const src = (V.v3 ? window.ROOMS_V3.T1 : window.ROOMS.T1).find(r => r.special === 'hall');
+  const rec = { name: src.name, area: src.area, kind: 'hall', floor: 0, note: src.note };
   const floor = makePatch(polyGeom(HALL, 0.012, 0.02), 'hall', rec); g1.add(floor); hover.push(floor);
 
   // ---- tường T1 (0–3,85) dày 0,2 ra phía ngoài đa giác; bỏ cạnh trùng tường ngoài nhà
@@ -53,13 +54,15 @@ export function buildHall(g1, g2, hover) {
   const U = new Builder();
   const up = [[14.43, 10.48], [14.43, 6.5], [18.5, 2.38], [27.9, 2.38], [31.96, 6.5], [31.96, 10.48]];
   for (let e = 0; e < up.length - 1; e++) {
-    if (V.proposal && e === 2) continue;   // tường trước: PA đề xuất dựng lại với 2 cửa đôi
+    if ((V.proposal || V.v3) && e === 2) continue;   // tường trước: PA đề xuất / V3 dựng lại với 2 cửa đôi
     U.wall(up[e][0], up[e][1], up[e + 1][0], up[e + 1][1], 3.85, 7.45, 0.2, M.wall);
   }
   U.box(14.23, 32.16, 10.33, 10.48, 3.85, 7.45, M.wall);
-  U.box(18.6, 27.8, 2.16, 2.2, 6.0, 7.2, M.glass);   // dải cửa sổ hắt sáng
+  if (!V.v3) U.box(18.6, 27.8, 2.16, 2.2, 6.0, 7.2, M.glass);   // dải cửa sổ hắt sáng (V3: dải kính nằm trên cửa ban công)
   U.build(g2);
+  const labels = [{ x: HC, y: 6.3, z: 3.2, rec }];
   if (V.proposal) { const P1 = new Builder(true), P2 = new Builder(true); propHall(P1, P2); P1.build(g1); P2.build(g2); }
+  if (V.v3) { const P2 = new Builder(true); labels.push(v3Hall(P2, g2, hover)); P2.build(g2); }
 
-  return [{ x: HC, y: 6.3, z: 3.2, rec }];
+  return labels;
 }

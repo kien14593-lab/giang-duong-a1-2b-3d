@@ -20,7 +20,7 @@ export function makePatch(geo, kind, rec) {
 
 export function buildStorey(i) {
   const z0 = FFL[i], z1 = TOP[i], key = FLOOR_KEY[i];
-  const rooms = V.proposal ? propRooms(i, window.ROOMS[key]) : window.ROOMS[key];
+  const rooms = V.proposal ? propRooms(i, window.ROOMS[key]) : V.v3 ? window.ROOMS_V3['T' + (i + 1)] : window.ROOMS[key];
   const g = new THREE.Group(); g.name = 'storey' + i;
   const B = new Builder(), P = new Builder(true), hover = [], labels = [];
 
@@ -41,7 +41,7 @@ export function buildStorey(i) {
 
   // ---- phòng
   for (const r of rooms) {
-    const rec = { name: r.name, area: r.area, est: r.est, kind: r.k, floor: i };
+    const rec = { name: r.name, area: r.area, est: r.est, kind: r.k, floor: i, note: r.note };
     if (r.prop) { r.prop(P, r, z0, z1); addPatch(g, hover, r, z0, rec); labels.push(lbl(r, z0, rec)); continue; }
     if (r.special === 'hall') continue;
     if (r.special === 'lift') { lift(B, r, z0, z1); if (i === 0) labels.push(lbl(r, z0, rec)); continue; }
@@ -51,7 +51,11 @@ export function buildStorey(i) {
       continue;
     }
     addPatch(g, hover, r, z0, rec);
-    if (!r.nowalls) { walls(B, r, z0, z1); furniture(B, r, z0); }
+    if (!r.nowalls) {
+      walls(B, r, z0, z1);
+      if (r.part) { partition(P, r, z0, z1); furniture(B, { ...r, x1: r.part - 0.06 }, z0); furniture(B, { ...r, x0: r.part + 0.06 }, z0); }
+      else furniture(B, r, z0);
+    }
     if (r.k !== 'corr') labels.push(lbl(r, z0, rec));
   }
   stairs(B, z0, z1, false); stairs(B, z0, z1, true);
@@ -61,7 +65,8 @@ export function buildStorey(i) {
   }
   facade(B, g, i, z0, z1);
   B.build(g);
-  if (V.proposal) { propStorey(P, i, z0, z1); P.build(g); }
+  if (V.proposal) propStorey(P, i, z0, z1);
+  P.build(g);
   return { group: g, hover, labels };
 }
 
@@ -92,13 +97,23 @@ function walls(B, r, z0, z1) {
   if (!ext.x1) B.box(r.x1, r.x1 + t, r.y0 - t, r.y1 + t, z0, h, M.wall);
   if (!ext.y0) B.box(r.x0 - t, r.x1 + t, r.y0 - t, r.y0, z0, h, M.wall);
   if (!ext.y1) B.box(r.x0 - t, r.x1 + t, r.y1, r.y1 + t, z0, h, M.wall);
+  if (r.door) { door(B, r, r.door[0], r.door[1], z0, t); return; }   // vị trí cửa chỉ định: [cạnh, tỷ lệ dọc cạnh]
   let e;
   if (r.x1 <= 5.4 && r.y0 >= 10) e = 'x1'; else if (r.x0 >= 41) e = 'x0'; else if (r.y0 > 6.5) e = 'y0'; else e = 'y1';
   if (ext[e]) e = ['y1', 'y0', 'x0', 'x1'].find(k => !ext[k]);
   if (!e) return;
   const along = e[0] === 'x' ? r.y1 - r.y0 : r.x1 - r.x0;
   const spots = along > 9 ? [0.25, 0.75] : [0.5];
+  if (r.part) spots.splice(0, 2, ((r.x0 + r.part) / 2 - r.x0) / (r.x1 - r.x0), ((r.part + r.x1) / 2 - r.x0) / (r.x1 - r.x0));   // mỗi nửa phòng một cửa riêng
   for (const f of spots) door(B, r, e, f, z0, t);
+}
+
+// Vách di động chia phòng linh hoạt (F1/F2): tấm 1,2 m ghép, cao tới trần, để 1 khe cửa 1,0 m sát hành lang
+function partition(P, r, z0, z1) {
+  const x = r.part, h = z1 - 0.15, ya = r.y0, yb = r.y1 - 1.2;
+  for (let y = ya; y < yb - 0.05; y += 1.2) P.box(x - 0.05, x + 0.05, y + 0.02, Math.min(y + 1.18, yb), z0, h, M.wood);
+  P.box(x - 0.05, x + 0.05, yb, r.y1, z0 + 2.2, h, M.wood);
+  P.box(x - 0.08, x + 0.08, ya, r.y1, h - 0.12, h, M.rail);   // ray treo
 }
 
 function door(B, r, e, f, z0, t, w = 0.95, hgt = 2.2) {
@@ -111,9 +126,11 @@ function door(B, r, e, f, z0, t, w = 0.95, hgt = 2.2) {
   }
 }
 
+// Nội thất theo loại phòng; `r.fx` chỉ định kiểu riêng: desk | lounge | rack | shelf | studio | sim
 function furniture(B, r, z0) {
   const w = r.x1 - r.x0, d = r.y1 - r.y0, yc = (r.y0 + r.y1) / 2;
-  if (r.k === 'lecture') {
+  const fx = r.fx || r.k;
+  if (fx === 'lecture') {
     B.box(r.x0 + 0.02, r.x0 + 0.06, yc - 1.8, yc + 1.8, z0 + 0.9, z0 + 2.1, M.board);
     B.box(r.x0 + 0.9, r.x0 + 2.3, yc - 0.7, yc + 0.7, z0 + 0.72, z0 + 0.76, M.wood);
     B.box(r.x0 + 0.95, r.x0 + 2.25, yc - 0.65, yc + 0.65, z0 + 0.3, z0 + 0.72, M.wood);
@@ -123,13 +140,18 @@ function furniture(B, r, z0) {
       B.box(x, x + 0.03, ya, yb, z0 + 0.3, z0 + 0.72, M.wood);
       for (let y = ya + 0.1; y + 0.45 <= yb; y += 0.6) B.box(x + 0.6, x + 1.0, y, y + 0.42, z0 + 0.42, z0 + 0.46, M.seat), B.box(x + 0.95, x + 1.0, y, y + 0.42, z0 + 0.46, z0 + 0.85, M.seat);
     }
-  } else if (r.k === 'meet') {
+  } else if (fx === 'meet') {
     const tl = Math.min(w - 2.6, 6.5), xc = (r.x0 + r.x1) / 2;
     B.box(xc - tl / 2, xc + tl / 2, yc - 0.7, yc + 0.7, z0 + 0.72, z0 + 0.76, M.wood);
     B.box(xc - tl / 2 + 0.6, xc + tl / 2 - 0.6, yc - 0.3, yc + 0.3, z0, z0 + 0.72, M.wood);
     for (let x = xc - tl / 2 + 0.4; x + 0.45 <= xc + tl / 2; x += 0.8) for (const y of [yc - 1.15, yc + 0.7]) B.box(x, x + 0.45, y, y + 0.45, z0 + 0.42, z0 + 0.46, M.seat), B.box(x, x + 0.45, y + (y < yc ? 0 : 0.4), y + (y < yc ? 0.05 : 0.45), z0 + 0.46, z0 + 0.9, M.seat);
     B.box(r.x0 + 0.02, r.x0 + 0.06, yc - 1.2, yc + 1.2, z0 + 0.9, z0 + 2.2, M.board);
-  } else if (r.k === 'tech' && r.area >= 8 && d > 2.2 && w > 2.2) {
+  } else if (fx === 'lab' || fx === 'sim') labFurniture(B, r, z0, fx === 'sim');
+  else if (fx === 'learn' || fx === 'studio') learnFurniture(B, r, z0, fx === 'studio');
+  else if (fx === 'rack') racks(B, r, z0);
+  else if (fx === 'shelf') shelves(B, r, z0);
+  else if (fx === 'lounge') lounge(B, r, z0);
+  else if ((fx === 'tech' || fx === 'desk') && r.area >= 8 && d > 2.2 && w > 2.2) {
     const n = r.area > 18 ? 2 : 1;
     for (let k = 0; k < n; k++) {
       const x = r.x0 + 0.6 + k * 2.2, y = r.y1 - 1.3;
@@ -137,6 +159,92 @@ function furniture(B, r, z0) {
       B.box(x + 0.45, x + 0.95, y - 0.6, y - 0.15, z0 + 0.42, z0 + 0.46, M.seat);
     }
   }
+}
+
+// ghế đơn 0,45 m tại (x, y); lưng quay về phía (sx, sy)
+function chair(B, x, y, z0, sy = 1, sx = 0) {
+  B.box(x - 0.22, x + 0.22, y - 0.22, y + 0.22, z0 + 0.42, z0 + 0.46, M.seat);
+  if (sy) B.box(x - 0.22, x + 0.22, y + sy * 0.22 - (sy > 0 ? 0.05 : 0), y + sy * 0.22 + (sy > 0 ? 0 : 0.05), z0 + 0.46, z0 + 0.9, M.seat);
+  else B.box(x + sx * 0.22 - (sx > 0 ? 0.05 : 0), x + sx * 0.22 + (sx > 0 ? 0 : 0.05), y - 0.22, y + 0.22, z0 + 0.46, z0 + 0.9, M.seat);
+}
+const roundTable = (B, x, y, z0, rad, h, mat) => { const g = new THREE.CylinderGeometry(rad, rad, 0.04, 20); g.translate(x, z0 + h, -y); B.add(g, mat); B.box(x - 0.06, x + 0.06, y - 0.06, y + 0.06, z0, z0 + h - 0.02, M.steel); };
+
+// PTN / mô phỏng: bảng + bàn GV, dãy bàn thí nghiệm cao 0,9 m (màn hình, thiết bị, ghế xoay), tủ thiết bị cuối phòng; `sim`: ca-bin mô phỏng lái
+function labFurniture(B, r, z0, sim) {
+  const yc = (r.y0 + r.y1) / 2, xEnd = sim ? r.x1 - 4.3 : r.x1 - 0.9;
+  B.box(r.x0 + 0.02, r.x0 + 0.06, yc - 1.8, yc + 1.8, z0 + 0.9, z0 + 2.1, M.board);
+  B.box(r.x0 + 0.9, r.x0 + 2.3, yc - 0.7, yc + 0.7, z0 + 0.72, z0 + 0.76, M.wood);
+  B.box(r.x0 + 0.95, r.x0 + 2.25, yc - 0.65, yc + 0.65, z0 + 0.3, z0 + 0.72, M.wood);
+  for (let x = r.x0 + 3.2; x + 1.6 < xEnd; x += 2.3) for (const [ya, yb] of [[r.y0 + 0.6, yc - 0.6], [yc + 0.6, r.y1 - 0.6]]) {
+    if (yb - ya < 1.2) continue;
+    B.box(x, x + 0.8, ya, yb, z0 + 0.86, z0 + 0.9, M.wood);
+    B.box(x + 0.05, x + 0.75, ya + 0.05, yb - 0.05, z0, z0 + 0.86, M.concrete);
+    for (let y = ya + 0.3; y + 0.5 <= yb - 0.1; y += 1.2) {
+      B.box(x + 0.15, x + 0.2, y, y + 0.5, z0 + 0.95, z0 + 1.3, M.rail);
+      B.box(x + 0.45, x + 0.75, y + 0.05, y + 0.35, z0 + 0.9, z0 + 1.05, M.steel);
+      B.box(x + 1.0, x + 1.4, y + 0.05, y + 0.45, z0 + 0.45, z0 + 0.5, M.p1);
+      B.box(x + 1.15, x + 1.25, y + 0.05, y + 0.45, z0, z0 + 0.45, M.steel);
+    }
+  }
+  if (sim) {
+    const x = r.x1 - 3.3;
+    B.box(x, x + 2.4, yc - 0.8, yc + 0.8, z0, z0 + 2.0, M.p1);                       // ca-bin lái
+    B.box(x - 0.6, x - 0.5, yc - 1.8, yc + 1.8, z0 + 0.6, z0 + 2.6, M.rail);          // màn hình cong phía trước
+    B.box(x - 0.6, x - 0.5, yc - 1.8, yc + 1.8, z0 + 0.65, z0 + 2.55, M.railGlass);
+  } else for (let y = r.y0 + 0.4; y + 1.0 <= r.y1 - 0.4; y += 1.1) B.box(r.x1 - 0.65, r.x1 - 0.05, y, y + 1.0, z0, z0 + 1.9, M.shaft);
+}
+
+// Learning Commons / Student Support Hub: bàn tròn 4 ghế; `studio`: bàn 2,4 × 1,2 m 6 ghế; kệ sách dọc tường cuối
+function learnFurniture(B, r, z0, studio) {
+  const px = studio ? 3.4 : 3.0, py = studio ? 3.0 : 2.8;
+  const nx = Math.floor((r.x1 - r.x0 - 1.6) / px), ny = Math.floor((r.y1 - r.y0 - 1.0) / py);
+  const ox = r.x0 + ((r.x1 - r.x0) - nx * px) / 2 + px / 2, oy = r.y0 + ((r.y1 - r.y0) - ny * py) / 2 + py / 2;
+  for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
+    const cx = ox + i * px, cy = oy + j * py;
+    if (studio) {
+      B.box(cx - 1.2, cx + 1.2, cy - 0.6, cy + 0.6, z0 + 0.72, z0 + 0.76, M.wood);
+      for (const dx of [-0.9, 0.9]) B.box(cx + dx - 0.03, cx + dx + 0.03, cy - 0.5, cy + 0.5, z0, z0 + 0.72, M.steel);
+      for (const s of [-1, 1]) for (const dx of [-0.8, 0, 0.8]) chair(B, cx + dx, cy + s * 0.9, z0, s);
+    } else {
+      roundTable(B, cx, cy, z0, 0.6, 0.74, M.wood);
+      for (const [dx, dy] of [[0, -0.85], [0, 0.85], [-0.85, 0], [0.85, 0]]) chair(B, cx + dx, cy + dy, z0, Math.sign(dy), Math.sign(dx));
+    }
+  }
+  if (r.x1 - r.x0 > 8) for (let y = r.y0 + 0.4; y + 1.0 <= r.y1 - 0.4; y += 1.1) B.box(r.x1 - 0.4, r.x1 - 0.05, y, y + 1.0, z0, z0 + 1.8, M.wood);
+}
+
+// Máy chủ / UPS: tủ rack 0,6 × 1,0 × 2,0 m dọc tường sau (và tường trước nếu phòng sâu), tủ UPS cạnh cửa
+function racks(B, r, z0) {
+  const yc = (r.y0 + r.y1) / 2, rows = r.y1 - r.y0 > 5 ? [r.y1 - 1.3, r.y0 + 0.3] : [r.y1 - 1.3];
+  for (const y of rows) for (let x = r.x0 + 1.8; x + 0.6 <= r.x1 - 0.4; x += 0.75) {
+    B.box(x, x + 0.6, y, y + 1.0, z0, z0 + 2.0, M.rail);
+    B.box(x + 0.05, x + 0.55, y - 0.02, y, z0 + 0.3, z0 + 1.9, M.steel);
+  }
+  B.box(r.x0 + 0.3, r.x0 + 1.5, yc - 0.4, yc + 0.4, z0, z0 + 1.6, M.shaft);
+}
+
+// Kho / chuẩn bị thiết bị: kệ 4 tầng dọc hai tường dài
+function shelves(B, r, z0) {
+  for (const [ya, yb] of [[r.y0 + 0.15, r.y0 + 0.65], [r.y1 - 0.65, r.y1 - 0.15]]) for (let x = r.x0 + 0.4; x + 1.0 <= r.x1 - 0.4; x += 1.1) {
+    for (const z of [0.1, 0.6, 1.1, 1.6]) B.box(x, x + 1.0, ya, yb, z0 + z, z0 + z + 0.04, M.wood);
+    B.box(x, x + 0.04, ya, yb, z0, z0 + 2.0, M.steel); B.box(x + 0.96, x + 1.0, ya, yb, z0, z0 + 2.0, M.steel);
+  }
+}
+
+// Phòng GV / nghỉ GV / Student Support Hub: sofa quanh bàn trà, bàn làm việc cuối phòng, tủ tài liệu
+function lounge(B, r, z0) {
+  const w = r.x1 - r.x0, d = r.y1 - r.y0, xc = (r.x0 + r.x1) / 2, yc = (r.y0 + r.y1) / 2;
+  if (w < 2.5 || d < 2.5) return;
+  roundTable(B, xc, yc, z0, 0.45, 0.42, M.wood);
+  for (const s of [-1, 1]) {
+    B.box(xc - 0.9, xc + 0.9, yc + s * 0.75 - 0.35, yc + s * 0.75 + 0.35, z0 + 0.15, z0 + 0.45, M.p1);
+    B.box(xc - 0.9, xc + 0.9, yc + s * 1.05 - 0.05, yc + s * 1.05 + 0.05, z0 + 0.15, z0 + 0.8, M.p1);
+  }
+  if (w > 4) {
+    B.box(r.x1 - 0.9, r.x1 - 0.1, yc - 0.8, yc + 0.8, z0 + 0.72, z0 + 0.75, M.wood); B.box(r.x1 - 0.85, r.x1 - 0.15, yc - 0.75, yc + 0.75, z0, z0 + 0.72, M.wood);
+    chair(B, r.x1 - 1.3, yc, z0, 0, -1);
+  }
+  for (let y = r.y0 + 0.3; y + 0.8 <= r.y1 - 0.3; y += 0.9) B.box(r.x0 + 0.05, r.x0 + 0.45, y, y + 0.8, z0, z0 + 1.9, M.wood);
 }
 
 function lift(B, r, z0, z1) {

@@ -23,8 +23,9 @@ export function initExport({ roots, variantName, $ }) {
   $('#expObj').onclick = () => {
     status('Đang xuất OBJ…');
     const g = new THREE.Group(); roots().forEach(r => g.add(r.clone()));
-    const shown = o => { while (o && o !== g) { if (!o.visible) return false; o = o.parent; } return true; };
-    g.traverse(o => { if (o.isMesh && !shown(o)) o.geometry = new THREE.BufferGeometry(); });
+    const drop = [];   // OBJExporter không chấp nhận hình học rỗng → bỏ hẳn phần đang ẩn / không có đỉnh
+    g.traverse(o => { if (o !== g && (!o.visible || (o.isMesh && !o.geometry.getAttribute('position')))) drop.push(o); });
+    drop.forEach(o => o.parent && o.parent.remove(o));
     g.updateMatrixWorld(true);
     const txt = new OBJExporter().parse(g), blob = new Blob([txt], { type: 'text/plain' });
     download(blob, fname('obj'));

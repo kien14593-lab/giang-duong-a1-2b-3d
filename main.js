@@ -7,6 +7,7 @@ import { buildStorey, kindMats, plainMat } from './storey.js';
 import { buildHall } from './hall.js';
 import { buildRoof, buildSite, buildGrid } from './roofsite.js';
 import { CHANGES } from './proposal.js';
+import { CHANGES_V3 } from './v3.js';
 import { initSun } from './sun.js';
 import { initMeasure } from './measure.js';
 import { initOverlay } from './overlay.js';
@@ -62,12 +63,12 @@ function build() {
     r.labels.forEach((d, k) => r.group.add(floors[i].labels[k]));
     hover.push(...r.hover); building.add(r.group);
   }
-  buildHall(floors[0].group, floors[1].group, hover).forEach(d => { const o = mkLabel(d); floors[0].labels.push(o); floors[0].group.add(o); });
+  buildHall(floors[0].group, floors[1].group, hover).forEach(d => { const f = floors[d.rec.floor ?? 0], o = mkLabel(d); f.labels.push(o); f.group.add(o); });
   floors.push({ group: buildRoof(), hover: [], labels: [], name: 'Mái & tum' }); floors[9].group.name = 'Mai_Tum'; building.add(floors[9].group);
   site = buildSite(); site.name = 'KhuDat'; scene.add(site);
-  building.name = V.proposal ? 'GiangDuong_A1-2B_DeXuat' : 'GiangDuong_A1-2B_BanGoc';
+  building.name = 'GiangDuong_A1-2B_' + variantName();
   [building, site].forEach(g => g.traverse(o => { if (o.userData.prop) propMeshes.push(o); }));
-  overlay.attach(floors);
+  overlay.attach(floors); buildLegend();
   // áp lại trạng thái giao diện
   floors.forEach((f, i) => { f.group.visible = vis.length ? vis[i] : true; f.group.position.y = i * S.explode; });
   building.traverse(o => { if (o.userData.facade) o.visible = S.facade; });
@@ -77,18 +78,28 @@ function build() {
 function applyHighlight() {
   propMeshes.forEach(o => { o.material = S.hl ? M.prop : o.userData.mat0; });
 }
+const VARIANTS = {
+  orig: { file: 'BanGoc', tag: 'BẢN GỐC · Hồ sơ TKSB', short: 'bản gốc', changes: null },
+  prop: { file: 'DeXuat', tag: 'PHƯƠNG ÁN ĐỀ XUẤT', short: 'phương án đề xuất', changes: CHANGES },
+  v3: { file: 'BaoCaoV3', tag: 'BÁO CÁO V3 · 24/09/2026', short: 'phương án theo Báo cáo V3', changes: CHANGES_V3 },
+};
+const variantName = () => VARIANTS[S.variant].file;
 function setVariant(v) {
-  S.variant = v; V.proposal = v === 'prop';
+  if (!VARIANTS[v]) return;
+  S.variant = v; V.proposal = v === 'prop'; V.v3 = v === 'v3';
+  const d = VARIANTS[v];
   document.querySelectorAll('#variant .b').forEach(b => b.classList.toggle('on', b.dataset.variant === v));
-  $('#variantTag').textContent = V.proposal ? 'phương án đề xuất' : 'bản gốc';
-  $('#banner .tag').textContent = V.proposal ? 'PHƯƠNG ÁN ĐỀ XUẤT' : 'BẢN GỐC · Hồ sơ TKSB';
-  $('#banner .tag').classList.toggle('prop', V.proposal);
+  document.querySelectorAll('#variantNote > div').forEach(n => { n.style.display = n.dataset.variant === v ? '' : 'none'; });
+  $('#variantTag').textContent = d.short;
+  $('#banner .tag').textContent = d.tag;
+  $('#banner .tag').className = 'tag ' + v;
+  $('#changes').className = v; $('#changes').innerHTML = (d.changes || []).map(([c, t]) => `<li><b>${c}:</b> ${t}</li>`).join('');
+  $('#changesBox').style.display = d.changes ? '' : 'none';
   $('#roominfo').style.display = 'none';
   build();
 }
 $('#variant').addEventListener('click', e => { const b = e.target.closest('button'); if (b && b.dataset.variant !== S.variant) setVariant(b.dataset.variant); });
 $('#hlOn').onchange = e => { S.hl = e.target.checked; applyHighlight(); };
-$('#changes').innerHTML = CHANGES.map(([c, t]) => `<li><b>${c}:</b> ${t}</li>`).join('');
 
 // ---- tầng
 const floorsEl = $('#floors');
@@ -108,9 +119,13 @@ function updateLabels() {
 }
 
 const legend = $('#legend');
-for (const [k, v] of Object.entries(KIND)) {
-  const it = document.createElement('div'); it.className = 'it';
-  it.innerHTML = `<span class="sw" style="background:#${kindColor(k).getHexString()}"></span>${v.n}`; legend.appendChild(it);
+function buildLegend() {
+  const used = new Set(hover.map(m => m.userData.kind)); legend.innerHTML = '';
+  for (const [k, v] of Object.entries(KIND)) {
+    if (!used.has(k)) continue;
+    const it = document.createElement('div'); it.className = 'it';
+    it.innerHTML = `<span class="sw" style="background:#${kindColor(k).getHexString()}"></span>${v.n}`; legend.appendChild(it);
+  }
 }
 
 // ---- công cụ chung
@@ -149,6 +164,7 @@ const VIEWS = {
   top: { p: [HC, 115, -6.3], t: [HC, 0, -6.5] },
   section: { p: [92, 24, 32], t: [HC, 12, -6.5], cutX: HC },
   hall: { p: [23.2, 3.8, -2.75], t: [23.2, 1.3, -9.6] },
+  balcony: { p: [15.3, 6.5, -10.3], t: [24.2, 4.0, -4.0] },
   room: { p: [9.4, 9.3, -7.6], t: [20, 8.6, -4.5] },
 };
 let tween = null;
@@ -165,7 +181,7 @@ camera.position.set(...VIEWS.persp.p); controls.target.set(...VIEWS.persp.t);
 const roots = () => [building, site];
 const sunSim = initSun({ sun, hemi, scene, $ });
 const measure = initMeasure({ scene, camera, dom: renderer.domElement, roots, $ });
-initExport({ roots, variantName: () => (V.proposal ? 'DeXuat' : 'BanGoc'), $ });
+initExport({ roots, variantName, $ });
 
 // ---- rê / bấm chọn phòng
 const ray = new THREE.Raycaster(), mouse = new THREE.Vector2(), tip = $('#tip');
@@ -177,7 +193,7 @@ function pick(ev) {
   const h = ray.intersectObjects(vis, false)[0];
   return h ? h.object.userData.room : null;
 }
-const roomText = r => `${floors[r.floor].name} · ${KIND[r.kind]?.n || ''}` + (r.area ? ` · ${r.est ? '≈ ' : ''}${fmt(r.area)} m²` : '');
+const roomText = r => `${floors[r.floor].name} · ${KIND[r.kind]?.n || ''}` + (r.area ? ` · ${r.est ? '≈ ' : ''}${fmt(r.area)} m²` : '') + (r.note ? ` · ${r.note}` : '');
 renderer.domElement.addEventListener('pointermove', ev => {
   if (ev.buttons || measure.S.on) { tip.style.display = 'none'; return; }
   hit = pick(ev);
@@ -207,7 +223,7 @@ function frame(now) {
   sunSim.tick(dt); controls.update();
   renderer.render(scene, camera); labelRenderer.render(scene, camera);
 }
-build();
+setVariant(S.variant);
 requestAnimationFrame(frame);
 $('#loading').remove();
 // Hook chẩn đoán (không ảnh hưởng người dùng)

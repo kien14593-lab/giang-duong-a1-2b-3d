@@ -14,8 +14,9 @@ export const COL_Y = [0.2, 4.7, 9.0, 12.8];
 export const GRID_X = [0, 8.2, 18.2, 28.2, 38.2, 46.4];
 export const GRID_Y = [0, 4.7, 9.0, 13.0];
 export const TOWER_TOP = 36.4, TUM_TOP = 35.0;
-// Cờ phương án: false = bản vẽ gốc, true = phương án đề xuất (đọc khi dựng hình)
-export const V = { proposal: false };
+// Cờ phương án (đọc khi dựng hình): proposal = phương án đề xuất cải tiến; v3 = công năng theo Báo cáo tóm tắt V3 (24/09/2026).
+// Cả hai false = bản vẽ gốc. Không bao giờ bật cùng lúc.
+export const V = { proposal: false, v3: false };
 
 // Đa giác hội trường (T1) và lỗ thông tầng trên sàn T2 (ngược chiều kim đồng hồ)
 export const HC = 23.195;
@@ -25,8 +26,10 @@ export const hallXL = y => (y >= 6.5 ? 14.43 : 14.43 + (6.5 - y) * (4.07 / 4.12)
 
 export const KIND = {
   hall: { c: [157, 39, 0], n: 'Hội trường' },
-  lecture: { c: [220, 55, 0], n: 'Giảng đường' },
-  meet: { c: [56, 0, 221], n: 'Phòng hội thảo' },
+  lecture: { c: [220, 55, 0], n: 'Giảng đường · phòng học' },
+  meet: { c: [56, 0, 221], n: 'Phòng hội thảo · seminar' },
+  lab: { c: [140, 70, 180], n: 'Phòng thí nghiệm · mô phỏng' },
+  learn: { c: [30, 150, 110], n: 'Học tập chung · dự án · hỗ trợ SV' },
   tech: { c: [55, 221, 1], n: 'Kỹ thuật · văn phòng · phụ trợ' },
   san: { c: [222, 0, 111], n: 'Vệ sinh · kho' },
   circ: { c: [0, 165, 221], n: 'Thang bộ · thang máy' },
@@ -69,7 +72,7 @@ export const FACADE_MATS = new Set([M.white, M.blue, M.dark, M.glass, M.mullion,
 const NO_SHADOW = new Set([M.glass, M.railGlass, M.water]);
 const MAT_NAME = new Map(Object.entries(M).map(([k, v]) => [v, k]));
 
-// Gom hình học theo vật liệu rồi hợp nhất → ít draw call. `prop = true`: đánh dấu là phần đề xuất (có thể tô sáng)
+// Gom hình học theo vật liệu rồi hợp nhất → ít draw call. `prop = true`: đánh dấu là phần thay đổi so với bản gốc (có thể tô sáng)
 export class Builder {
   constructor(prop = false) { this.b = new Map(); this.prop = prop; }
   add(g, mat) {
@@ -111,7 +114,7 @@ export class Builder {
       const merged = mergeGeometries(geoms, false);
       if (!merged) continue;
       const m = new THREE.Mesh(merged, mat);
-      m.name = (this.prop ? 'DeXuat_' : '') + (MAT_NAME.get(mat) || 'mat');
+      m.name = (this.prop ? (V.v3 ? 'V3_' : 'DeXuat_') : '') + (MAT_NAME.get(mat) || 'mat');
       m.castShadow = !NO_SHADOW.has(mat); m.receiveShadow = true;
       if (FACADE_MATS.has(mat)) m.userData.facade = true;
       if (this.prop) { m.userData.prop = true; m.userData.mat0 = mat; }
