@@ -38,7 +38,7 @@ Mô hình 3D tương tác của **Giảng đường A1-2B (9 tầng)** – Phân
 ### Mở file xuất ra trong phần mềm khác
 
 - Đơn vị **mét**, trục **Y hướng lên** (chuẩn glTF); các nhóm tên `Tang_1…Tang_9`, `Mai_Tum`, `KhuDat`; mesh đặt theo tên phòng / vật liệu, phần đề xuất có tiền tố `DeXuat_`, phần dựng thêm theo Báo cáo V3 có tiền tố `V3_`.
-- **D5 Render**, **Twinmotion**, **Blender**: mở/nhập trực tiếp file .glb (D5/Twinmotion có sẵn thư viện cây, người, xe, trời để render ảnh/phim như thật). **SketchUp 2025+**: *File → Import* chọn .glb; bản cũ hơn cần extension *glTF Import* (Extension Warehouse). **Revit** không đọc glTF/OBJ trực tiếp → dùng plugin. OBJ dùng cho phần mềm không đọc glTF (ví dụ Lumion). Chọn trục Y-up khi nhập nếu phần mềm hỏi.
+- **D5 Render**, **Twinmotion**, **Blender**: mở/nhập trực tiếp file .glb (D5/Twinmotion có sẵn thư viện cây, người, xe, trời để render ảnh/phim như thật; Blender có script dựng cảnh sẵn – xem mục [Mở bằng Blender](#mở-bằng-blender)). **SketchUp 2025+**: *File → Import* chọn .glb; bản cũ hơn cần extension *glTF Import* (Extension Warehouse). **Revit** không đọc glTF/OBJ trực tiếp → dùng plugin. OBJ dùng cho phần mềm không đọc glTF (ví dụ Lumion). Chọn trục Y-up khi nhập nếu phần mềm hỏi.
 - Vật liệu được đơn giản hoá (màu + độ nhám), mặt cắt động không xuất; OBJ không kèm màu.
 - Bầu trời, bối cảnh (đường, cây, xe, người, nhà lân cận) và đèn trong nhà của chế độ *Phối cảnh đẹp* **không được xuất**; xuất khi đang bật chế độ này thì file vẫn dùng vật liệu kỹ thuật và cây/người đơn giản của khu đất như chế độ thường.
 
@@ -106,7 +106,46 @@ Tick **Bật chế độ phối cảnh đẹp** (mục *Phối cảnh đẹp & c
 - Góc nhìn nên dùng: *Góc phố (tầm mắt)*, *Chính diện tầm mắt*, *Phối cảnh*.
 - **📷 Chụp ảnh PNG** Full HD / 2K / 4K theo góc nhìn hiện tại (ảnh 4K ≈ 10–15 MB, mất vài giây). Nút chụp dùng được cả ở chế độ thường (nền chuyển màu).
 - Máy yếu (card đồ hoạ tích hợp): tắt *Bóng tiếp xúc (AO)* và *Bối cảnh* trước để xoay mượt hơn.
-- Cần ảnh/phim "như thật" hơn nữa (cây 3D, người, vật liệu PBR, chiếu sáng toàn cục): xuất **.glb** rồi dựng cảnh trong **D5 Render**, **Twinmotion**, **Blender** (hoặc OBJ cho **Lumion**).
+- Cần ảnh/phim "như thật" hơn nữa (cây 3D, người, vật liệu PBR, chiếu sáng toàn cục): xuất **.glb** rồi dựng cảnh trong **Blender** (có script dựng sẵn – mục dưới), **D5 Render**, **Twinmotion** (hoặc OBJ cho **Lumion**).
+
+## Mở bằng Blender
+
+Script [`blender/A1-2B_blender.py`](blender/A1-2B_blender.py) nhập file .glb xuất từ web và dựng sẵn cảnh render trong **Blender 4.2 trở lên** (đã thử trên Blender 5.2, miễn phí tại [blender.org](https://www.blender.org/download/)): bầu trời vật lý + nắng đúng vị trí mặt trời tại TP.HCM theo ngày/giờ, kính thật (phản chiếu, xuyên sáng), sàn trơn, nền cỏ, 3 camera phối cảnh 2 điểm tụ (cạnh đứng thẳng), Cycles GPU + khử nhiễu, ảnh 1920 × 1080.
+
+| Góc phố (15 h, 15/12) | Trên cao |
+|---|---|
+| ![Render Blender – góc phố](blender/mau_GocPho.jpg) | ![Render Blender – trên cao](blender/mau_TrenCao.jpg) |
+
+1. **Xuất .glb trên web**: chọn phương án (và *Mặt đứng* PA nếu xem Báo cáo V3), bấm *Hiện tất cả* ở mục *Tầng hiển thị*, bỏ tick *Tô sáng phần thay đổi* (quên thì script tự trả lại màu gốc) → *Xuất mô hình* › **⬇ glTF (.glb)**.
+2. **Tải script** [A1-2B_blender.py](https://kien14593-lab.github.io/giang-duong-a1-2b-3d/blender/A1-2B_blender.py) (có link ở mục *Xuất mô hình* trên web).
+3. **Mở Blender** › *General* › tab **Scripting** (hàng tab trên cùng) › khung soạn thảo: **Open** › chọn `A1-2B_blender.py` › bấm **▶** (*Run Script*) › chọn file .glb › **Nhập & dựng cảnh**. Vài giây sau hiện bảng thông báo: máy render, vị trí mặt trời, tên camera.
+4. **Xem**: bấm tab **Layout** · **Numpad 0** = nhìn qua camera · **Home** = khung camera vừa màn hình · đổi camera: bấm chọn camera trong *Outliner* › **Ctrl + Numpad 0** (laptop không có phím số: menu *View › Cameras › Active Camera* / *Set Active Object as Camera*, *View › Frame Camera Bounds*). Lần đầu Blender biên dịch shader khoảng 1 phút (chờ hết dòng *Compiling shaders*).
+5. **Render**: **F12** (card rời ≈ 30–90 giây/ảnh Full HD) › cửa sổ ảnh: *Image › Save As* để lưu PNG/JPG.
+
+Đã tự nhập mô hình (*File › Import › glTF 2.0*) thì bấm ▶ script chỉ dựng cảnh, không hỏi file. Đổi ngày giờ, hướng, cỡ ảnh: sửa khối **TUỲ CHỈNH** ở đầu script rồi bấm ▶ lần nữa – cảnh được cập nhật, không phải nhập lại mô hình, không sinh thêm đối tượng trùng.
+
+| Biến | Mặc định | Ý nghĩa |
+|---|---|---|
+| `NGAY` | `'2026-12-15'` | Ngày tính vị trí mặt trời (`'YYYY-MM-DD'`); `''` = hôm nay |
+| `GIO` | `15.0` | Giờ TP.HCM, `15.5` = 15 h 30. 15 h tháng 12: nắng hướng Tây Nam, giống ánh sáng mặc định trên web |
+| `HUONG_MAT_CHINH` | `180` | Phương vị mặt đứng chính (0 Bắc · 90 Đông · 180 Nam · 270 Tây), như thanh *Hướng mặt chính* trên web |
+| `DONG_CO` | `'CYCLES'` | `'CYCLES'` ảnh đẹp nhất · `'EEVEE'` nhanh, để xem thử |
+| `SO_MAU` | `128` | Số mẫu Cycles: 64 nháp · 128 thường · 256+ ảnh cuối |
+| `KICH_THUOC` | `(1920, 1080)` | Cỡ ảnh (rộng, cao); `(3840, 2160)` cho 4K |
+| `PHOI_SANG` | `0.0` | Độ sáng ảnh (EV): `+0.5` sáng hơn · `-0.5` tối hơn |
+| `SAN_TRON` | `True` | Thay sàn tô màu công năng bằng sàn trơn |
+| `AN_NGUOI_CAY_KHOI` | `False` | `True` = ẩn cây, người dạng khối của web (khi đã tự thêm cây, người 3D) |
+
+Render cả 3 camera không mở giao diện (ảnh PNG `A1-2B_Cam_*.png`):
+
+```
+"C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" -b -P A1-2B_blender.py -- GiangDuong-A1-2B_....glb thu_muc_anh
+```
+
+- Vị trí mặt trời tính theo thuật toán NOAA như mục *Nắng & bóng đổ* của web; hướng bóng đổ trong Blender trùng với web ở cùng ngày, giờ, hướng mặt chính. Nắng do đèn *Sun* `A1-2B_MatTroi` đảm nhận (màu ấm dần khi mặt trời thấp, tự tắt khi mặt trời đã lặn) để Cycles, EEVEE và khung nhìn *Material Preview* cho cùng một ánh sáng.
+- Đối tượng do script tạo có tiền tố `A1-2B_` (collection `A1-2B_Canh`, camera `A1-2B_Cam_GocPho` / `_ChinhDien` / `_TrenCao`, bầu trời `A1-2B_BauTroi`); muốn chỉnh tay góc máy: chọn camera › phím **N** › *Item*.
+- Máy không có card đồ hoạ rời: Cycles chạy bằng CPU chậm hơn nhiều → đặt `SO_MAU = 64` hoặc `DONG_CO = 'EEVEE'`, cỡ ảnh nhỏ hơn.
+- Muốn giống ảnh diễn hoạ hơn: thêm cây, người, xe 3D miễn phí từ [Poly Haven](https://polyhaven.com/models) hoặc add-on [BlenderKit](https://www.blenderkit.com/) rồi đặt `AN_NGUOI_CAY_KHOI = True`.
 
 ## Công nghệ
 
@@ -128,6 +167,7 @@ Tick **Bật chế độ phối cảnh đẹp** (mục *Phối cảnh đẹp & c
 | `main.js` | Scene, camera, giao diện điều khiển, chuyển phương án, chú giải theo phương án |
 | `data.js` · `data_v3.js` | Dữ liệu phòng theo tầng (`window.ROOMS` theo TKSB · `window.ROOMS_V3` theo Báo cáo V3) |
 | `plans/` · `img/` · `env/` | Ảnh mặt bằng cắt từ PDF (đã canh toạ độ) · logo · ảnh bầu trời 360° (4K + 1K) |
+| `blender/` | Script dựng cảnh Blender `A1-2B_blender.py` + ảnh render mẫu (xem [Mở bằng Blender](#mở-bằng-blender)) |
 | `goc/` | Bản lưu mô hình gốc (đóng băng) |
 
 Chạy cục bộ: mở thư mục bằng một máy chủ tĩnh bất kỳ (ví dụ `python -m http.server`) rồi truy cập `index.html` – không mở trực tiếp bằng `file://` vì trình duyệt chặn ES modules.

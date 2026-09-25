@@ -19,7 +19,7 @@ export function initExport({ roots, variantName, $, prepare }) {
     const ex = new GLTFExporter();
     guard(() => ex.parse(roots(), res => {
       const blob = new Blob([res], { type: 'model/gltf-binary' }); download(blob, fname('glb'));
-      status(`Đã xuất ${fname('glb')} (${mb(blob.size)}). Mở trực tiếp bằng D5 Render, Twinmotion, Blender, SketchUp 2025+ (File › Import) hoặc Windows 3D Viewer; SketchUp bản cũ cần extension glTF Import, Revit cần plugin glTF.`);
+      status(`Đã xuất ${fname('glb')} (${mb(blob.size)}). Mở trực tiếp bằng D5 Render, Twinmotion, Blender (dùng script bên dưới để dựng cảnh render), SketchUp 2025+ (File › Import) hoặc Windows 3D Viewer; SketchUp bản cũ cần extension glTF Import, Revit cần plugin glTF.`);
     }, err => { console.error(err); status('Lỗi xuất glTF: ' + err.message); }, { binary: true, onlyVisible: true, maxTextureSize: 2048 }));
   };
   $('#expObj').onclick = () => {
