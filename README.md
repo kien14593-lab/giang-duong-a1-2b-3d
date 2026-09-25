@@ -36,7 +36,7 @@ Mô hình 3D tương tác của **Giảng đường A1-2B (9 tầng)** – Phân
 ### Mở file xuất ra trong phần mềm khác
 
 - Đơn vị **mét**, trục **Y hướng lên** (chuẩn glTF); các nhóm tên `Tang_1…Tang_9`, `Mai_Tum`, `KhuDat`; mesh đặt theo tên phòng / vật liệu, phần đề xuất có tiền tố `DeXuat_`, phần dựng thêm theo Báo cáo V3 có tiền tố `V3_`.
-- **SketchUp** 2021+: *File → Import → glTF (.glb)*; **Revit** 2022+: nhập qua *Insert → Import CAD* không đọc glTF trực tiếp → dùng OBJ hoặc plugin glTF; **Blender / Rhino / Navisworks / 3ds Max** đọc .glb trực tiếp. Chọn trục Z-up khi nhập nếu phần mềm hỏi.
+- **D5 Render**, **Twinmotion**, **Blender**: mở/nhập trực tiếp file .glb (D5/Twinmotion có sẵn thư viện cây, người, xe, trời để render ảnh/phim như thật). **SketchUp 2025+**: *File → Import* chọn .glb; bản cũ hơn cần extension *glTF Import* (Extension Warehouse). **Revit** không đọc glTF/OBJ trực tiếp → dùng plugin. OBJ dùng cho phần mềm không đọc glTF (ví dụ Lumion). Chọn trục Y-up khi nhập nếu phần mềm hỏi.
 - Vật liệu được đơn giản hoá (màu + độ nhám), mặt cắt động không xuất; OBJ không kèm màu.
 
 ## Phương án đề xuất (7 hạng mục)
