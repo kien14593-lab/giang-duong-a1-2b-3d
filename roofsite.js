@@ -4,6 +4,7 @@ import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { Builder, M, L, W, GRADE, ROOF, TOWER_TOP, TUM_TOP, COL_X, COL_Y, GRID_X, GRID_Y, V } from './common.js';
 import { STAIR_WELLS, LIFTS, rect } from './storey.js';
 import { propRoof, propSite } from './proposal.js';
+import { paActive, roofPA } from './facade_v3.js';
 
 export function buildRoof() {
   const g = new THREE.Group(); g.name = 'roof';
@@ -11,6 +12,19 @@ export function buildRoof() {
   B.poly(rect(0, L, 0, W), ROOF - 0.15, ROOF, M.slab, [...STAIR_WELLS, ...LIFTS].map(r => rect(...r)));
   for (const y of COL_Y) B.box(0, L, y - 0.15, y + 0.15, ROOF - 0.6, ROOF - 0.15, M.concrete);
   for (const x of COL_X) B.box(x - 0.15, x + 0.15, 0, W, ROOF - 0.6, ROOF - 0.15, M.concrete);
+  if (paActive()) roofPA(B); else roofTKSB(B);
+  B.box(7.97, 8.23, 5.2, 6.2, ROOF, ROOF + 2.2, M.door);
+  B.box(38.17, 38.43, 5.2, 6.2, ROOF, ROOF + 2.2, M.door);
+  // thiết bị mái: bồn nước trên tum, dàn nóng điều hoà
+  for (const x of [40.6, 43.4]) { const c = new THREE.CylinderGeometry(0.9, 0.9, 1.6, 24); c.translate(x, TUM_TOP + 0.8, -6.5); B.add(c, M.steel); }
+  for (const x of [11, 16, 21, 26, 31]) B.box(x, x + 1.1, 11.0, 11.9, ROOF, ROOF + 0.9, M.steel);
+  B.build(g);
+  if (V.proposal) { const P = new Builder(true); propRoof(P); P.build(g); }
+  return g;
+}
+
+// vỏ mái theo hồ sơ TKSB (mặt đứng PA1–PA3 của Báo cáo V3: facade_v3.js)
+function roofTKSB(B) {
   // ốp đầu sàn + lan can mái thân giữa
   B.box(8.2, 38.2, -0.05, 0.25, ROOF - 0.6, ROOF + 1.0, M.white); B.box(8.2, 38.2, 12.75, 13.05, ROOF - 0.6, ROOF + 1.0, M.white);
   // tháp trắng trái (lõi thang + thang máy vượt mái)
@@ -18,23 +32,15 @@ export function buildRoof() {
   B.box(-0.05, 0.2, -0.05, 13.05, ROOF, TOWER_TOP, M.white); B.box(8.0, 8.2, 0, 13, ROOF, TOWER_TOP, M.white);
   B.box(-0.05, 8.2, -0.05, 13.05, TOWER_TOP - 0.15, TOWER_TOP, M.white);
   for (const x of [1.6, 3.6, 5.6]) { B.box(x, x + 1, -0.08, -0.03, ROOF + 1.3, ROOF + 2.3, M.dark); B.box(x, x + 1, 13.03, 13.08, ROOF + 1.3, ROOF + 2.3, M.dark); }
-  B.box(7.97, 8.23, 5.2, 6.2, ROOF, ROOF + 2.2, M.door);
   // tum xanh phải
   B.box(38.2, 46.4, -0.05, 0.2, ROOF, TUM_TOP, M.blue); B.box(38.2, 46.4, 12.8, 13.05, ROOF, TUM_TOP, M.blue);
   B.box(46.2, 46.45, -0.05, 13.05, ROOF, TUM_TOP, M.blue); B.box(38.2, 38.4, 0, 13, ROOF, TUM_TOP, M.blue);
   B.box(38.2, 46.45, -0.05, 13.05, TUM_TOP - 0.15, TUM_TOP, M.blue);
   for (let k = 0; k < 7; k++) { const x = 39.3 + k; B.box(x, x + 0.25, -0.08, -0.03, ROOF + 0.3, TUM_TOP - 0.3, M.dark); }
-  B.box(38.17, 38.43, 5.2, 6.2, ROOF, ROOF + 2.2, M.door);
   // khung mái (pergola) nhẹ trên thân giữa
   B.box(8.2, 38.2, 0.4, 0.7, 35.3, 35.85, M.white); B.box(8.2, 38.2, 12.3, 12.6, 35.3, 35.85, M.white);
   for (let x = 10.7; x < 38.2; x += 5) { B.box(x - 0.15, x + 0.15, 0.4, 0.7, ROOF, 35.3, M.white); B.box(x - 0.15, x + 0.15, 12.3, 12.6, ROOF, 35.3, M.white); }
   for (let x = 8.2 + 0.625; x < 38.2; x += 1.25) B.box(x - 0.06, x + 0.06, 0.4, 12.6, 35.6, 35.85, M.louvre);
-  // thiết bị mái: bồn nước trên tum, dàn nóng điều hoà
-  for (const x of [40.6, 43.4]) { const c = new THREE.CylinderGeometry(0.9, 0.9, 1.6, 24); c.translate(x, TUM_TOP + 0.8, -6.5); B.add(c, M.steel); }
-  for (const x of [11, 16, 21, 26, 31]) B.box(x, x + 1.1, 11.0, 11.9, ROOF, ROOF + 0.9, M.steel);
-  B.build(g);
-  if (V.proposal) { const P = new Builder(true); propRoof(P); P.build(g); }
-  return g;
 }
 
 export function buildSite() {

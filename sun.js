@@ -90,7 +90,7 @@ export function initSun({ sun, hemi, scene, $, onChange }) {
   document.querySelectorAll('[data-sunday]').forEach(b => { b.onclick = () => { dateEl.value = `${S.date.getFullYear()}-${presets[b.dataset.sunday]}`; dateEl.onchange(); }; });
   apply();
   return {
-    S, apply,
+    S, apply, group: grp,
     tick(dt) { if (!S.play) return; S.hour += dt * 0.8; if (S.hour > 18.5) S.hour = 5.5; hourEl.value = S.hour.toFixed(2); hourEl.oninput(); },
     setEnabled(on) { S.on = on; $('#sunOn').checked = on; apply(); },
   };

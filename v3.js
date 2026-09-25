@@ -4,7 +4,7 @@ import { M, HC, hallXL, polyGeom } from './common.js';
 import { makePatch } from './storey.js';
 
 export const CHANGES_V3 = [
-  ['Nguồn', 'Báo cáo tóm tắt đầu tư A1-2B phiên bản V3 (24/09/2026): giữ khối nhà 9 tầng 46,4 × 13 m, lưới cột 8,2–10–10–10–8,2 m, lõi thang/WC theo hồ sơ TKSB; thay công năng các tầng theo bảng 2.2 và hình 1–3. Vỏ bao che giữ theo hồ sơ (báo cáo nêu 3 phương án mặt đứng, chưa chốt).'],
+  ['Nguồn', 'Báo cáo tóm tắt đầu tư A1-2B phiên bản V3 (24/09/2026): giữ khối nhà 9 tầng 46,4 × 13 m, lưới cột 8,2–10–10–10–8,2 m, lõi thang/WC theo hồ sơ TKSB; thay công năng các tầng theo bảng 2.2 và hình 1–3. Vỏ bao che mặc định theo hồ sơ TKSB; chọn được mặt đứng PA1 · PA2 · PA3 dựng lại theo ảnh phối cảnh của báo cáo (báo cáo chưa chốt phương án, không có bản vẽ mặt đứng → kích thước chi tiết là ước lượng).'],
   ['T1', 'Hội trường thông tầng T1–T2 (giữ 204 chỗ); Student Support Hub tại vị trí văn phòng cũ; giảng đường 56 chỗ; phòng GV + trực PCCC/an ninh sau lõi thang trái.'],
   ['T2', 'Ban công hội trường: lối đi ngang +4,6 và 3 hàng ghế bậc +4,3 / +4,0 / +3,7 m (≈ 53 chỗ), lan can trước cao 1,05 m, thông thuỷ dưới ban công ≥ 2,2 m so với bậc khán đài T1. Vào bằng 2 cửa đôi 1,4 m trên tường trước ở +4,6 qua bệ 3 bậc từ sảnh ban công (+4,0); phòng kỹ thuật/kho góc trước thu ngắn để mở lối từ hành lang bên. Báo cáo ghi 360 m² ≈ 358 chỗ – không khả thi trong lỗ thông tầng; kết cấu công-xôn ≈ 3,3 m cần tính riêng.'],
   ['T3', 'PTN thiết kế IC · PTN ứng dụng IC – đo kiểm – PCB · UPS/mạng/ESD (báo cáo 120 + 120 + 60 m² vượt vùng phòng ≈ 264 m² – mô hình chia theo tỷ lệ) · phòng GV.'],

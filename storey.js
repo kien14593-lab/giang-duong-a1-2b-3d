@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { Builder, M, L, W, FFL, TOP, FLOOR_KEY, COL_X, COL_Y, VOID, KIND, kindColor, planes, GRADE, V, rect } from './common.js';
 import { propRooms, propStorey } from './proposal.js';
+import { paActive, facadePA } from './facade_v3.js';
 
 export const STAIR_WELLS = [[0.3, 5.8, 0.3, 4.4], [40.6, 46.1, 0.3, 4.4]];
 export const LIFTS = [[0.24, 2.45, 4.74, 6.94], [0.24, 2.45, 7.14, 9.34]];
@@ -63,7 +64,7 @@ export function buildStorey(i) {
     B.wall(xa, ya, xb, yb, z0, z0 + 1.05, 0.04, M.railGlass);
     B.wall(xa, ya, xb, yb, z0 + 1.05, z0 + 1.1, 0.07, M.rail);
   }
-  facade(B, g, i, z0, z1);
+  if (paActive()) facadePA(B, g, i, z0, z1); else facade(B, g, i, z0, z1);
   B.build(g);
   if (V.proposal) propStorey(P, i, z0, z1);
   P.build(g);
@@ -320,18 +321,19 @@ function facade(B, g, i, z0, z1) {
 
 // ---- Logo trường trên khối xanh mặt chính (T9): đĩa nền trắng Ø2,2 m + logo chính thức UTC/UTC2 (img/logo-utc.png).
 // CircleGeometry nằm trong mặt XY, hướng +z (mặt trước) → ảnh thẳng, không lật/xoay; texture dùng chung, không dispose khi dựng lại.
+// o = độ nhô của bề mặt gắn logo ra phía trước mặt nhà (m), r = bán kính đĩa nền (mặt đứng PA1–PA3 dùng logo lớn hơn).
 let logoTex = null;
-export function logoBadge(z0, x = 42.3, dz = 1.9) {
+export function logoBadge(z0, x = 42.3, dz = 1.9, o = 0.05, r = 1.1) {
   if (!logoTex) {
     logoTex = new THREE.TextureLoader().load('img/logo-utc.png');
     logoTex.colorSpace = THREE.SRGBColorSpace; logoTex.anisotropy = 8;
   }
-  const disc = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.06, 48), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, clippingPlanes: planes }));
-  disc.rotation.x = Math.PI / 2; disc.position.set(x, z0 + dz, 0.09); disc.castShadow = true; disc.name = 'Logo_De';
-  const logo = new THREE.Mesh(new THREE.CircleGeometry(1.04, 64), new THREE.MeshStandardMaterial({
+  const disc = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.06, 48), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, clippingPlanes: planes }));
+  disc.rotation.x = Math.PI / 2; disc.position.set(x, z0 + dz, o + 0.04); disc.castShadow = true; disc.name = 'Logo_De';
+  const logo = new THREE.Mesh(new THREE.CircleGeometry(r - 0.06, 64), new THREE.MeshStandardMaterial({
     map: logoTex, transparent: true, alphaTest: 0.05, roughness: 0.6, emissive: 0xffffff, emissiveMap: logoTex, emissiveIntensity: 0.22, clippingPlanes: planes,
   }));
-  logo.position.set(x, z0 + dz, 0.125); logo.name = 'Logo_UTC2';
+  logo.position.set(x, z0 + dz, o + 0.075); logo.name = 'Logo_UTC2';
   for (const m of [disc, logo]) { m.userData.facade = true; m.userData.keep = true; }
   return [disc, logo];
 }

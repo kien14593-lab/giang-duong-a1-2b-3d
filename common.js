@@ -16,7 +16,8 @@ export const GRID_Y = [0, 4.7, 9.0, 13.0];
 export const TOWER_TOP = 36.4, TUM_TOP = 35.0;
 // Cờ phương án (đọc khi dựng hình): proposal = phương án đề xuất cải tiến; v3 = công năng theo Báo cáo tóm tắt V3 (24/09/2026).
 // Cả hai false = bản vẽ gốc. Không bao giờ bật cùng lúc.
-export const V = { proposal: false, v3: false };
+// facade (chỉ dùng khi v3): 'tksb' = vỏ theo hồ sơ TKSB; 'pa1' | 'pa2' | 'pa3' = mặt đứng theo ảnh phối cảnh của Báo cáo V3
+export const V = { proposal: false, v3: false, facade: 'tksb' };
 
 // Đa giác hội trường (T1) và lỗ thông tầng trên sàn T2 (ngược chiều kim đồng hồ)
 export const HC = 23.195;
@@ -52,6 +53,33 @@ function std(color, o = {}) {
   m.clippingPlanes = planes;
   return m;
 }
+function glassMat(color, opacity, o = {}) {
+  const m = new THREE.MeshPhysicalMaterial(Object.assign({ color, transparent: true, opacity, roughness: 0.05, metalness: 0.15, side: THREE.DoubleSide, depthWrite: false }, o));
+  m.clippingPlanes = planes;
+  return m;
+}
+// Đá ốp (mặt đứng PA1–PA3): tấm 1,2 × 0,6 m xếp thẳng mạch, 1 ô texture = 2,4 × 2,4 m, tô màu bằng color của vật liệu
+function stoneTexture() {
+  let seed = 20260924;
+  const rnd = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
+  const t = canvasTexture(512, 512, (c, w, h) => {
+    const pw = w / 2, ph = h / 4;
+    for (let r = 0; r < 4; r++) for (let k = 0; k < 2; k++) {
+      const v = 238 + Math.round((rnd() - 0.5) * 12);
+      c.fillStyle = `rgb(${v},${v},${v - 2})`; c.fillRect(k * pw, r * ph, pw, ph);
+    }
+    const img = c.getImageData(0, 0, w, h), d = img.data;
+    for (let p = 0; p < d.length; p += 4) { const n = (rnd() - 0.5) * 14; d[p] += n; d[p + 1] += n; d[p + 2] += n; }
+    c.putImageData(img, 0, 0);
+    c.fillStyle = 'rgba(120,115,105,0.55)';
+    for (let r = 0; r < 4; r++) c.fillRect(0, r * ph, w, 2);
+    for (let k = 0; k < 2; k++) c.fillRect(k * pw, 0, 2, h);
+  });
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8;
+  return t;
+}
+const STONE_TEX = stoneTexture();
+const stoneMat = color => Object.assign(std(color, { map: STONE_TEX, roughness: 0.72 }), { userData: { uvScale: 2.4 } });
 export const M = {
   white: std(0xf4f3ef), blue: std(0x4d8fd1, { roughness: 0.6 }), dark: std(0x2b3a4a, { roughness: 0.3, metalness: 0.4 }),
   slab: std(0xdcdad4), plinth: std(0x9d9c98), concrete: std(0xc7c5bf), col: std(0xeeece6), wall: std(0xf1eee7),
@@ -66,11 +94,32 @@ export const M = {
   // vật liệu cho phương án đề xuất
   prop: std(0xff8a2a, { emissive: 0x6b2e00, emissiveIntensity: 0.35, roughness: 0.6 }),
   green: std(0x5e9a3c, { roughness: 1 }), pv: std(0x17263f, { roughness: 0.25, metalness: 0.6 }), fire: std(0xc8332b, { roughness: 0.5 }),
+  // vật liệu mặt đứng PA1–PA3 (Báo cáo V3)
+  stone: stoneMat(0xf6ead6), stone2: stoneMat(0xf7f6f2),
+  gold: std(0xc9a263, { roughness: 0.4, metalness: 0.35 }), gold2: std(0xd2bd92, { roughness: 0.4, metalness: 0.3 }),
+  bronze: std(0x5a4a38, { roughness: 0.5, metalness: 0.4 }), cwFrame: std(0xd9d4ca, { roughness: 0.4, metalness: 0.5 }),
+  cwGlass: glassMat(0x9ec1d9, 0.45), cwGlass2: glassMat(0x6fa3d6, 0.55), cwGlass3: glassMat(0x3f7fc4, 0.6),
+  spandrel: std(0x9db8d2, { roughness: 0.3, metalness: 0.1 }), planter: std(0x8d8a83), shrub: std(0x4e8a3a, { roughness: 0.9 }),
 };
+for (const [k, m] of Object.entries(M)) { m.name = k; m.userData.shared = true; }   // dùng chung giữa các lần dựng → không dispose
 // Vật liệu thuộc "vỏ bao che" – có thể tắt để nhìn vào trong
-export const FACADE_MATS = new Set([M.white, M.blue, M.dark, M.glass, M.mullion, M.louvre, M.fin]);
-const NO_SHADOW = new Set([M.glass, M.railGlass, M.water]);
+export const FACADE_MATS = new Set([M.white, M.blue, M.dark, M.glass, M.mullion, M.louvre, M.fin,
+  M.stone, M.stone2, M.gold, M.gold2, M.bronze, M.cwFrame, M.cwGlass, M.cwGlass2, M.cwGlass3, M.spandrel, M.planter, M.shrub]);
+const NO_SHADOW = new Set([M.glass, M.railGlass, M.water, M.cwGlass, M.cwGlass2, M.cwGlass3]);
 const MAT_NAME = new Map(Object.entries(M).map(([k, v]) => [v, k]));
+
+// UV phẳng theo toạ độ thế giới (chiếu theo pháp tuyến trội) để texture đá liền mạch, đúng tỉ lệ trên mọi khối
+function worldUV(g, s) {
+  const p = g.attributes.position, n = g.attributes.normal, uv = g.attributes.uv;
+  if (!uv || !n) return;
+  for (let k = 0; k < p.count; k++) {
+    const ax = Math.abs(n.getX(k)), ay = Math.abs(n.getY(k)), az = Math.abs(n.getZ(k)), x = p.getX(k), y = p.getY(k), z = p.getZ(k);
+    if (ay >= ax && ay >= az) uv.setXY(k, x / s, -z / s);
+    else if (ax >= az) uv.setXY(k, -z / s, y / s);
+    else uv.setXY(k, x / s, y / s);
+  }
+  uv.needsUpdate = true;
+}
 
 // Gom hình học theo vật liệu rồi hợp nhất → ít draw call. `prop = true`: đánh dấu là phần thay đổi so với bản gốc (có thể tô sáng)
 export class Builder {
@@ -113,6 +162,7 @@ export class Builder {
     for (const [mat, geoms] of this.b) {
       const merged = mergeGeometries(geoms, false);
       if (!merged) continue;
+      if (mat.userData.uvScale) worldUV(merged, mat.userData.uvScale);
       const m = new THREE.Mesh(merged, mat);
       m.name = (this.prop ? (V.v3 ? 'V3_' : 'DeXuat_') : '') + (MAT_NAME.get(mat) || 'mat');
       m.castShadow = !NO_SHADOW.has(mat); m.receiveShadow = true;
@@ -136,4 +186,19 @@ export function canvasTexture(w, h, draw) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   draw(c.getContext('2d'), w, h);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+
+// UV của map lấy theo toạ độ thế giới trên mặt bằng (x, z) / scale → texture nền (cỏ, lát, nhựa) lặp đều, liền mạch giữa các khối
+export function worldTex(mat, scale) {
+  if (mat.map) { mat.map.wrapS = mat.map.wrapT = THREE.RepeatWrapping; mat.map.anisotropy = 8; }
+  const s = (1 / scale).toFixed(5);
+  mat.onBeforeCompile = sh => {
+    sh.vertexShader = sh.vertexShader.replace('#include <uv_vertex>', `#include <uv_vertex>
+#ifdef USE_MAP
+	vMapUv = ( modelMatrix * vec4( position, 1.0 ) ).xz * ${s};
+#endif`);
+  };
+  mat.customProgramCacheKey = () => 'worldTex' + s;
+  mat.needsUpdate = true;
+  return mat;
 }

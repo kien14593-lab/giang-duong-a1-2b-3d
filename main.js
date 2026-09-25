@@ -12,6 +12,8 @@ import { initSun } from './sun.js';
 import { initMeasure } from './measure.js';
 import { initOverlay } from './overlay.js';
 import { initExport } from './export.js';
+import { initRender } from './render.js';
+import { FACADES } from './facade_v3.js';
 
 const $ = s => document.querySelector(s);
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -31,7 +33,7 @@ Object.assign(sun.shadow.camera, { left: -70, right: 70, top: 70, bottom: -70, n
 
 const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.3, 1200);
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true; controls.dampingFactor = 0.08; controls.maxPolarAngle = Math.PI * 0.55; controls.autoRotateSpeed = 0.8;
+controls.enableDamping = true; controls.dampingFactor = 0.08; controls.maxPolarAngle = Math.PI * 0.58; controls.autoRotateSpeed = 0.8;
 
 // ---- dựng mô hình (có thể dựng lại khi đổi phương án)
 const fmt = v => v.toLocaleString('vi-VN', { maximumFractionDigits: 1 });
@@ -49,7 +51,7 @@ function mkLabel(d) {
 function dispose(root) {
   root.traverse(o => {
     if (o.isCSS2DObject) o.element.remove();   // sự kiện 'removed' chỉ phát cho con trực tiếp
-    if (o.isMesh) { o.geometry.dispose(); if (o.material.map && !o.userData.overlay && !o.userData.keep) { o.material.map.dispose(); o.material.dispose(); } }
+    if (o.isMesh) { o.geometry.dispose(); if (o.material.map && !o.userData.overlay && !o.userData.keep && !o.material.userData.shared) { o.material.map.dispose(); o.material.dispose(); } }
   });
   while (root.children.length) root.remove(root.children[0]);
 }
@@ -73,7 +75,7 @@ function build() {
   floors.forEach((f, i) => { f.group.visible = vis.length ? vis[i] : true; f.group.position.y = i * S.explode; });
   building.traverse(o => { if (o.userData.facade) o.visible = S.facade; });
   hover.forEach(m => { m.material = S.colors ? kindMats[m.userData.kind] : plainMat; });
-  applyHighlight(); updateLabels();
+  applyHighlight(); updateLabels(); R.afterBuild();
 }
 function applyHighlight() {
   propMeshes.forEach(o => { o.material = S.hl ? M.prop : o.userData.mat0; });
@@ -83,7 +85,13 @@ const VARIANTS = {
   prop: { file: 'DeXuat', tag: 'PHƯƠNG ÁN ĐỀ XUẤT', short: 'phương án đề xuất', changes: CHANGES },
   v3: { file: 'BaoCaoV3', tag: 'BÁO CÁO V3 · 24/09/2026', short: 'phương án theo Báo cáo V3', changes: CHANGES_V3 },
 };
-const variantName = () => VARIANTS[S.variant].file;
+const pa = () => (S.variant === 'v3' && V.facade !== 'tksb' ? FACADES[V.facade] : null);
+const variantName = () => VARIANTS[S.variant].file + (pa() ? '-' + pa().file : '');
+function setBanner() {
+  const d = VARIANTS[S.variant];
+  $('#banner .tag').textContent = d.tag + (pa() ? ' · ' + pa().tag : '');
+  $('#banner .tag').className = 'tag ' + S.variant;
+}
 function setVariant(v) {
   if (!VARIANTS[v]) return;
   S.variant = v; V.proposal = v === 'prop'; V.v3 = v === 'v3';
@@ -91,8 +99,7 @@ function setVariant(v) {
   document.querySelectorAll('#variant .b').forEach(b => b.classList.toggle('on', b.dataset.variant === v));
   document.querySelectorAll('#variantNote > div').forEach(n => { n.style.display = n.dataset.variant === v ? '' : 'none'; });
   $('#variantTag').textContent = d.short;
-  $('#banner .tag').textContent = d.tag;
-  $('#banner .tag').className = 'tag ' + v;
+  setBanner();
   $('#changes').className = v; $('#changes').innerHTML = (d.changes || []).map(([c, t]) => `<li><b>${c}:</b> ${t}</li>`).join('');
   $('#changesBox').style.display = d.changes ? '' : 'none';
   $('#roominfo').style.display = 'none';
@@ -100,6 +107,19 @@ function setVariant(v) {
 }
 $('#variant').addEventListener('click', e => { const b = e.target.closest('button'); if (b && b.dataset.variant !== S.variant) setVariant(b.dataset.variant); });
 $('#hlOn').onchange = e => { S.hl = e.target.checked; applyHighlight(); };
+// mặt đứng của PA Báo cáo V3: theo hồ sơ TKSB hoặc PA1–PA3 dựng theo ảnh phối cảnh trong báo cáo
+const facadeEl = $('#facade');
+facadeEl.innerHTML = Object.entries(FACADES).map(([k, f]) => `<button class="b${k === V.facade ? ' on' : ''}" data-facade="${k}">${f.btn}</button>`).join('');
+function setFacade(f) {
+  if (!FACADES[f]) return;
+  V.facade = f;
+  facadeEl.querySelectorAll('.b').forEach(b => b.classList.toggle('on', b.dataset.facade === f));
+  $('#facadeHint').textContent = FACADES[f].hint;
+  setBanner();
+  if (S.variant === 'v3') build();
+}
+facadeEl.addEventListener('click', e => { const b = e.target.closest('button'); if (b && b.dataset.facade !== V.facade) setFacade(b.dataset.facade); });
+$('#facadeHint').textContent = FACADES[V.facade].hint;
 
 // ---- tầng
 const floorsEl = $('#floors');
@@ -148,6 +168,7 @@ for (const id of Object.keys(sliders)) {
 const setSlider = (id, v) => { const el = $('#' + id); el.value = v; el.oninput(); };
 $('#resetCuts').onclick = () => { setSlider('cutX', 47); setSlider('cutY', 14); setSlider('cutZ', 38); };
 $('#resetAll').onclick = () => {
+  R.setOn(false);
   $('#resetCuts').onclick(); setSlider('explode', 0);
   for (const [id, v] of [['labelsOn', false], ['facadeOn', true], ['colorsOn', true], ['gridOn', false], ['rotateOn', false], ['shadowOn', true], ['hlOn', false]]) { const el = $('#' + id); el.checked = v; el.onchange({ target: el }); }
   floors.forEach((f, i) => setFloor(i, true)); overlay.setOn(false); sunSim.setEnabled(false); measure.setOn(false); setView('persp');
@@ -166,6 +187,9 @@ const VIEWS = {
   hall: { p: [23.2, 3.8, -2.75], t: [23.2, 1.3, -9.6] },
   balcony: { p: [15.3, 6.5, -10.3], t: [24.2, 4.0, -4.0] },
   room: { p: [9.4, 9.3, -7.6], t: [20, 8.6, -4.5] },
+  // tầm mắt người đứng (1,7 m trên mặt sân) – hợp với chế độ phối cảnh đẹp
+  street: { p: [78, 0.7, 40], t: [24, 9, -6.5] },
+  eye: { p: [HC, 0.7, 56], t: [HC, 15, -6.5] },
 };
 let tween = null;
 function setView(name) {
@@ -181,7 +205,36 @@ camera.position.set(...VIEWS.persp.p); controls.target.set(...VIEWS.persp.t);
 const roots = () => [building, site];
 const sunSim = initSun({ sun, hemi, scene, $ });
 const measure = initMeasure({ scene, camera, dom: renderer.domElement, roots, $ });
-initExport({ roots, variantName, $ });
+const R = initRender({ renderer, scene, camera, sun, hemi, $, getFloors: () => floors, getSite: () => site,
+  helpers: () => [sunSim.group, grid.group, measure.group], onToggle: renderToggled });
+initExport({ roots, variantName, $, prepare: () => R.exportGuard() });
+
+// ---- phối cảnh đẹp & chụp ảnh
+const setCheck = (id, v) => { const el = $('#' + id); el.checked = v; el.onchange({ target: el }); };
+let colorsBefore = null;
+function renderToggled(on) {
+  $('#rOn').checked = on; $('#rOpts').classList.toggle('dim', !on);
+  if (on) { if (colorsBefore === null) colorsBefore = S.colors; setCheck('colorsOn', false); }   // sàn màu công năng → sàn trơn
+  else if (colorsBefore !== null) { setCheck('colorsOn', colorsBefore); colorsBefore = null; }
+}
+$('#rOn').onchange = e => { R.setOn(e.target.checked); };
+for (const [id, k] of [['rSky', 'sky'], ['rAO', 'ao'], ['rCtx', 'ctx'], ['rLights', 'lights'], ['rBloom', 'bloom']]) $('#' + id).onchange = e => R.set(k, e.target.checked);
+$('#rExp').oninput = e => { R.set('exposure', +e.target.value); e.target.parentElement.querySelector('.v').textContent = (+e.target.value).toFixed(2).replace('.', ','); };
+function download(blob, name) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+}
+$('#shotBtn').onclick = async () => {
+  const btn = $('#shotBtn'), [w, h] = $('#shotSize').value.split('x').map(Number), txt = btn.textContent, note = $('#shotInfo');
+  btn.disabled = true; btn.textContent = 'Đang chụp…';
+  await new Promise(r => setTimeout(r, 50));
+  try {
+    const blob = await R.shot(w, h), name = `A1-2B_${variantName()}_${new Date().toISOString().slice(0, 10)}_${w}x${h}.png`;
+    download(blob, name);
+    note.textContent = `Đã lưu ${name} (${(blob.size / 1048576).toFixed(1)} MB).`;
+  } catch (e) { console.error(e); note.textContent = 'Không chụp được ảnh: ' + e.message + ' – thử cỡ ảnh nhỏ hơn.'; }
+  finally { btn.disabled = false; btn.textContent = txt; }
+};
 
 // ---- rê / bấm chọn phòng
 const ray = new THREE.Raycaster(), mouse = new THREE.Vector2(), tip = $('#tip');
@@ -209,7 +262,7 @@ renderer.domElement.addEventListener('pointerup', ev => {
 renderer.domElement.addEventListener('pointerleave', () => { tip.style.display = 'none'; });
 
 // ---- vòng lặp
-addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); labelRenderer.setSize(innerWidth, innerHeight); });
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); labelRenderer.setSize(innerWidth, innerHeight); R.resize(); });
 const ease = t => 1 - Math.pow(1 - t, 3);
 let last = performance.now();
 function frame(now) {
@@ -221,13 +274,14 @@ function frame(now) {
     if (k >= 1) tween = null;
   }
   sunSim.tick(dt); controls.update();
-  renderer.render(scene, camera); labelRenderer.render(scene, camera);
+  if (R.on) R.render(); else renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
 }
 setVariant(S.variant);
 requestAnimationFrame(frame);
 $('#loading').remove();
 // Hook chẩn đoán (không ảnh hưởng người dùng)
-window.__app = { renderer, scene, camera, controls, setView, setSlider, setFloor, setVariant, S, V, sunSim, measure, overlay, get floors() { return floors; }, get building() { return building; }, get site() { return site; },
-  shot: (name = 'shot') => { renderer.render(scene, camera); labelRenderer.render(scene, camera); return fetch('/shot?name=' + name, { method: 'POST', body: renderer.domElement.toDataURL('image/png') }).then(r => r.text()); } };
+window.__app = { renderer, scene, camera, controls, setView, setSlider, setFloor, setVariant, setFacade, S, V, R, sunSim, measure, overlay, get floors() { return floors; }, get building() { return building; }, get site() { return site; },
+  shot: (name = 'shot') => { if (R.on) R.render(); else renderer.render(scene, camera); labelRenderer.render(scene, camera); return fetch('/shot?name=' + name, { method: 'POST', body: renderer.domElement.toDataURL('image/png') }).then(r => r.text()); } };
 addEventListener('error', e => { (window.__errs = window.__errs || []).push(String(e.message)); });
 addEventListener('unhandledrejection', e => { (window.__errs = window.__errs || []).push(String(e.reason)); });
