@@ -136,16 +136,42 @@ Script [`blender/A1-2B_blender.py`](blender/A1-2B_blender.py) nhập file .glb x
 | `SAN_TRON` | `True` | Thay sàn tô màu công năng bằng sàn trơn |
 | `AN_NGUOI_CAY_KHOI` | `False` | `True` = ẩn cây, người dạng khối của web (khi đã tự thêm cây, người 3D) |
 
-Render cả 3 camera không mở giao diện (ảnh PNG `A1-2B_Cam_*.png`):
+Chạy bằng dòng lệnh:
 
 ```
+rem Mở Blender, nhập và dựng cảnh luôn (không cần qua tab Scripting; script hiện sẵn trong tab Scripting để sửa)
+"C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" --python A1-2B_blender.py -- GiangDuong-A1-2B_....glb
+
+rem Render cả 3 camera, không mở giao diện (ảnh PNG A1-2B_Cam_*.png)
 "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" -b -P A1-2B_blender.py -- GiangDuong-A1-2B_....glb thu_muc_anh
 ```
+
+Mẹo Windows: tạo file `Mo_bang_Blender.bat` cạnh script với nội dung `start "" "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" --python "%~dp0A1-2B_blender.py" -- %1` rồi **kéo thả file .glb vào file .bat** là Blender mở ra với cảnh dựng sẵn (bấm đúp file .bat thì Blender hỏi chọn file .glb).
 
 - Vị trí mặt trời tính theo thuật toán NOAA như mục *Nắng & bóng đổ* của web; hướng bóng đổ trong Blender trùng với web ở cùng ngày, giờ, hướng mặt chính. Nắng do đèn *Sun* `A1-2B_MatTroi` đảm nhận (màu ấm dần khi mặt trời thấp, tự tắt khi mặt trời đã lặn) để Cycles, EEVEE và khung nhìn *Material Preview* cho cùng một ánh sáng.
 - Đối tượng do script tạo có tiền tố `A1-2B_` (collection `A1-2B_Canh`, camera `A1-2B_Cam_GocPho` / `_ChinhDien` / `_TrenCao`, bầu trời `A1-2B_BauTroi`); muốn chỉnh tay góc máy: chọn camera › phím **N** › *Item*.
 - Máy không có card đồ hoạ rời: Cycles chạy bằng CPU chậm hơn nhiều → đặt `SO_MAU = 64` hoặc `DONG_CO = 'EEVEE'`, cỡ ảnh nhỏ hơn.
 - Muốn giống ảnh diễn hoạ hơn: thêm cây, người, xe 3D miễn phí từ [Poly Haven](https://polyhaven.com/models) hoặc add-on [BlenderKit](https://www.blenderkit.com/) rồi đặt `AN_NGUOI_CAY_KHOI = True`.
+
+### Thao tác cơ bản trong Blender
+
+| Việc cần làm | Thao tác |
+|---|---|
+| Xoay quanh công trình | Giữ **chuột giữa** (nhấn con lăn) rồi kéo · không có chuột giữa: kéo quả cầu trục X-Y-Z ở góc phải trên khung nhìn |
+| Phóng to / thu nhỏ | **Lăn chuột** · hoặc kéo biểu tượng kính lúp ở góc phải trên |
+| Dời khung nhìn | **Shift + chuột giữa** · hoặc kéo biểu tượng bàn tay ở góc phải trên |
+| Quay về góc camera | **Numpad 0** · hoặc bấm biểu tượng camera ở góc phải trên · hoặc *View › Cameras › Active Camera* |
+| Khung camera vừa màn hình | **Home** · hoặc *View › Frame Camera Bounds* |
+| Đổi camera | Bấm tên camera trong *Outliner* (khung phải trên, nhóm `A1-2B_Canh`) › **Ctrl + Numpad 0** · hoặc *View › Cameras › Set Active Object as Camera* |
+| Kiểu hiển thị | 4 nút tròn ở góc phải trên thanh công cụ khung nhìn (hoặc phím **Z**): *Wireframe* · *Solid* (nhanh) · *Material Preview* (mặc định của script) · **Rendered** (xem trước ảnh Cycles ngay trong khung nhìn) |
+| Ẩn/hiện đường phụ (đèn, camera, con trỏ 3D) | **Shift + Alt + Z** · hoặc nút *Overlays* (2 vòng tròn lồng nhau) ở góc phải trên |
+| Render ảnh | **F12** (hoặc *Render › Render Image*) → cửa sổ ảnh: *Image › Save As* (**Shift + Alt + S**) |
+| Lưu file Blender | **Ctrl + S** (mở lại: bấm đúp file `.blend`) |
+| Hoàn tác | **Ctrl + Z** |
+| Đổi giờ nắng | Tab **Scripting** › sửa `GIO = 17.0` (hoặc `NGAY`, `HUONG_MAT_CHINH`) › bấm **▶** (**Alt + P**) |
+| Laptop không có phím số / chuột giữa | *Edit › Preferences › Input* › bật **Emulate Numpad** (phím số hàng trên thay Numpad) và **Emulate 3 Button Mouse** (Alt + chuột trái thay chuột giữa) |
+
+Lỡ xoay mất góc camera thì chỉ cần **Numpad 0** (hoặc biểu tượng camera) – camera không bị xê dịch khi xoay khung nhìn.
 
 ## Công nghệ
 

@@ -17,8 +17,9 @@
 #   Đổi ngày/giờ/hướng/cỡ ảnh: sửa các biến dưới đây rồi bấm ▶ lần nữa (không phải nhập lại mô hình).
 #   Nếu đã tự nhập .glb (File › Import › glTF 2.0) thì script chỉ dựng cảnh, không hỏi file.
 #
-# Dòng lệnh (render cả 3 camera, không mở giao diện):
-#   blender -b -P A1-2B_blender.py -- mo_hinh.glb [thu_muc_anh]
+# Dòng lệnh:
+#   blender --python A1-2B_blender.py -- mo_hinh.glb               mở Blender, nhập và dựng cảnh luôn (script hiện sẵn ở tab Scripting)
+#   blender -b -P A1-2B_blender.py -- mo_hinh.glb [thu_muc_anh]    render cả 3 camera, không mở giao diện
 
 import bpy, math, os, sys, datetime
 from mathutils import Vector
@@ -430,6 +431,7 @@ def khung_nhin():
             try:
                 sp = area.spaces.active
                 sp.clip_end = 30000.0
+                sp.overlay.show_relationship_lines = False   # bỏ nét đứt nối logo/các nhóm về gốc mô hình
                 sp.shading.type = 'MATERIAL'
                 for k in ('use_scene_world', 'use_scene_lights'):
                     if hasattr(sp.shading, k):
@@ -505,6 +507,8 @@ def dung_canh():
             o.select_set(False)
         except RuntimeError:
             pass
+    if bpy.context.view_layer.objects.get(goc_nha.name):
+        bpy.context.view_layer.objects.active = goc_nha
 
     huong = HUONG[round(az / 45) % 8]
     phut = round(GIO * 60)
@@ -526,6 +530,47 @@ def thong_bao(msg, icon='INFO'):
         for dong in msg.split('\n'):
             self.layout.label(text=dong)
     bpy.context.window_manager.popup_menu(ve, title='A1-2B', icon=icon)
+
+
+def dung_canh_giao_dien():
+    try:
+        msg = dung_canh()
+    except Exception as e:
+        thong_bao(str(e), 'ERROR')
+        return
+    khung_nhin()
+    thong_bao(msg)
+
+
+def nap_van_ban():
+    """Mở chính script này trong Text Editor (tab Scripting) để sửa khối TUỲ CHỈNH rồi bấm ▶."""
+    duong = os.path.abspath(globals().get('__file__', ''))
+    if not os.path.isfile(duong):
+        return
+    txt = next((t for t in bpy.data.texts if t.filepath and os.path.normcase(os.path.abspath(bpy.path.abspath(t.filepath))) == os.path.normcase(duong)), None)
+    if txt is None:
+        txt = bpy.data.texts.load(duong)
+    for scr in bpy.data.screens:
+        for area in scr.areas:
+            if area.type == 'TEXT_EDITOR' and area.spaces.active.text is None:
+                area.spaces.active.text = txt
+
+
+def khi_san_sang(fn):
+    """Script chạy bằng --python trước khi cửa sổ Blender hiện ra → đợi cửa sổ mở xong mới nhập / dựng cảnh."""
+    view = bpy.context.preferences.view
+    an_chao = view.show_splash
+    view.show_splash = False   # màn hình chào không che cảnh vừa dựng (chỉ lần mở này, bật lại ngay bên dưới)
+
+    def cho():
+        wm = bpy.context.window_manager
+        if not wm.windows:
+            return 0.5
+        view.show_splash = an_chao
+        with bpy.context.temp_override(window=wm.windows[0]):
+            fn()
+        return None
+    bpy.app.timers.register(cho, first_interval=0.5)
 
 
 class A12B_OT_nhap_glb(bpy.types.Operator):
@@ -561,8 +606,8 @@ def dang_ky():
 
 def chay():
     dang_ky()
+    args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
     if bpy.app.background:
-        args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
         if args and args[0].lower().endswith(('.glb', '.gltf')):
             nhap(args[0])
         print(dung_canh())
@@ -574,14 +619,17 @@ def chay():
                 sc.render.filepath = os.path.join(os.path.abspath(args[1]), cam.name + '.png')
                 bpy.ops.render.render(write_still=True)
                 print('Đã lưu', sc.render.filepath)
+    elif bpy.context.area is None:   # blender [file.blend] --python A1-2B_blender.py [-- mo_hinh.glb]
+        nap_van_ban()
+        glb = next((a for a in args if a.lower().endswith(('.glb', '.gltf'))), '')
+        if tim_mo_hinh()[0]:
+            khi_san_sang(dung_canh_giao_dien)
+        elif glb:
+            khi_san_sang(lambda: bpy.ops.a12b.nhap_glb('EXEC_DEFAULT', filepath=os.path.abspath(glb)))
+        else:
+            khi_san_sang(lambda: bpy.ops.a12b.nhap_glb('INVOKE_DEFAULT'))
     elif tim_mo_hinh()[0]:
-        try:
-            msg = dung_canh()
-        except Exception as e:
-            thong_bao(str(e), 'ERROR')
-            return
-        khung_nhin()
-        thong_bao(msg)
+        dung_canh_giao_dien()
     else:
         bpy.ops.a12b.nhap_glb('INVOKE_DEFAULT')
 
